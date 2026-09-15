@@ -1,0 +1,2 @@
+import { WorkspaceModulePage } from "@/components/workspace/workspace-module-page";
+export default function OperationsPage() { return <WorkspaceModulePage config={{ module: "operations", navLabel: "Abläufe", eyebrow: "Qualität", title: "Interne Abläufe", description: "Wiederkehrende Prozesse, Checklisten, Verantwortlichkeiten und Dokumentationen festhalten.", addLabel: "Ablauf hinzufügen", titleLabel: "Prozess / Ablauf", subtitleLabel: "Bereich / Auslöser", statuses: ["Entwurf", "Aktiv", "Überarbeiten", "Archiviert"], dateFields: true, files: true }} />; }

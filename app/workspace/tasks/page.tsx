@@ -1,0 +1,2 @@
+import { WorkspaceModulePage } from "@/components/workspace/workspace-module-page";
+export default function TasksPage() { return <WorkspaceModulePage config={{ module: "tasks", navLabel: "Aufgaben", eyebrow: "Organisation", title: "Interne Aufgaben", description: "Aufgaben zentral planen, priorisieren und mit klarer Verantwortung abschliessen.", addLabel: "Aufgabe hinzufügen", titleLabel: "Aufgabe", subtitleLabel: "Bereich / Projekt", statuses: ["Offen", "In Arbeit", "Wartet", "Erledigt"], dateFields: true }} />; }

@@ -1,7 +1,7 @@
 {
-  "name": "bewerbungen-tracker",
+  "name": "wendico-buchhaltung",
   "version": "1.0.0",
-  "description": "",
+  "description": "Buchhaltungssystem für Wendico",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
@@ -9,18 +9,10 @@
     "start": "next start",
     "lint": "eslint ."
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Panat-ZHH/bewerbungen-tracker.git"
-  },
-  "keywords": [],
+  "keywords": ["buchhaltung", "wendico"],
   "author": "",
   "license": "ISC",
   "type": "module",
-  "bugs": {
-    "url": "https://github.com/Panat-ZHH/bewerbungen-tracker/issues"
-  },
-  "homepage": "https://github.com/Panat-ZHH/bewerbungen-tracker#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
     "clsx": "^2.1.1",

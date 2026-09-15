@@ -1,73 +1,139 @@
-export type ApplicationStatus =
-  | "saved"
-  | "preparing"
-  | "applied"
-  | "interview"
-  | "final_interview"
-  | "offer"
-  | "rejected"
-  | "withdrawn";
+export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+export type ProspectStatus = "new" | "contacted" | "meeting" | "offer" | "won" | "lost";
+export type WorkspaceModule = "projects" | "ideas" | "tasks" | "offers" | "people" | "commissions" | "leads" | "operations";
+export type WorkspacePriority = "low" | "medium" | "high";
 
-export type ApplicationCategory =
-  | "software"
-  | "sales"
-  | "business"
-  | "finance"
-  | "banking"
-  | "consulting"
-  | "other";
+export interface InvoiceItem {
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    vatRate: number;
+  }
 
-export type CVType = "developer" | "sales" | "finance" | "other";
+export interface Invoice {
+    id: string;
+    invoiceNumber: string;
+    customerName: string;
+    customerEmail?: string;
+    customerAddress?: string;
+    issueDate: string;
+    dueDate: string;
+    status: InvoiceStatus;
+    currency: string;
+    items: InvoiceItem[];
+    notes?: string;
+    paidAt?: string;
+    createdAt: string;
+    updatedAt: string;
+  }
 
-export interface Application {
+export interface Expense {
+    id: string;
+    vendor: string;
+    description: string;
+    amount: number;
+    currency: string;
+    expenseDate: string;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+export interface Document {
+    id: string;
+    name: string;
+    documentDate: string;
+    fileName?: string;
+    storagePath?: string;
+    fileType?: string;
+    fileSize?: number;
+    createdAt: string;
+  }
+
+export interface CompanyProfile {
+    companyName: string;
+    ownerName: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    postalCode?: string;
+    city?: string;
+    country: string;
+    website?: string;
+    vatNumber?: string;
+    iban?: string;
+    defaultCurrency: string;
+    defaultVatRate: number;
+}
+
+  export interface Customer {
+    id: string;
+    companyName: string;
+    contactName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    project?: string;
+    monthlyRevenue: number;
+    oneTimeRevenue: number;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+  export interface Prospect {
+    id: string;
+    companyName: string;
+    contactName?: string;
+    email?: string;
+    phone?: string;
+    source?: string;
+    status: ProspectStatus;
+    lastContactAt?: string;
+    nextTask?: string;
+    nextTaskAt?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+export interface WorkspaceItem {
   id: string;
-  company: string;
-  position: string;
-  location?: string;
-  jobUrl?: string;
-  source?: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  currency?: string;
-  deadline?: string;
-  category: ApplicationCategory;
-  status: ApplicationStatus;
-  matchScore?: number;
-  appliedAt?: string;
+  module: WorkspaceModule;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  status: string;
+  priority: WorkspacePriority;
+  owner?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  amount?: number;
+  startDate?: string;
+  dueDate?: string;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
-  cvType?: CVType;
-  jobDescription?: string;
-  notes?: string;
 }
 
-export interface ApplicationEvent {
+export interface WorkspaceFile {
   id: string;
-  applicationId: string;
-  type: "created" | "applied" | "interview" | "final_interview" | "note";
-  label: string;
-  date: string;
-}
-
-export interface Profile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  website?: string;
-  linkedIn?: string;
-}
-
-export interface CV {
-  id: string;
+  itemId: string;
   name: string;
-  type: CVType;
-  description: string;
-  updatedAt: string;
-  status: "Ready" | "Draft";
-  fileName?: string;
-  storagePath?: string;
+  storagePath: string;
   fileType?: string;
   fileSize?: number;
+  createdAt: string;
+}
+
+export interface MonthlyGoal {
+  id: string;
+  month: string;
+  revenueTarget: number;
+  recurringRevenueTarget: number;
+  expenseBudget: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,16 +1,12 @@
-import type { Application } from "@/types";
+import type { Expense, Invoice } from "@/types";
 
-export const mockApplications: Application[] = [
-  { id: "app-01", company: "Swisscom", position: "Junior Software Engineer", location: "Bern", category: "software", status: "interview", matchScore: 91, appliedAt: "2026-09-12", createdAt: "2026-08-28", updatedAt: "2026-09-12", cvType: "developer" },
-  { id: "app-02", company: "On", position: "Frontend Developer", location: "Zürich", category: "software", status: "applied", matchScore: 87, appliedAt: "2026-09-09", createdAt: "2026-09-09", updatedAt: "2026-09-09", cvType: "developer" },
-  { id: "app-03", company: "Lindt & Sprüngli", position: "Business Development Associate", location: "Kilchberg", category: "business", status: "applied", matchScore: 83, appliedAt: "2026-09-07", createdAt: "2026-09-07", updatedAt: "2026-09-08", cvType: "sales" },
-  { id: "app-04", company: "UBS", position: "Graduate Program - Technology", location: "Zürich", category: "banking", status: "final_interview", matchScore: 94, appliedAt: "2026-08-30", createdAt: "2026-08-22", updatedAt: "2026-09-10", cvType: "developer" },
-  { id: "app-05", company: "Zurich Insurance", position: "Data Analyst", location: "Zürich", category: "finance", status: "rejected", matchScore: 78, appliedAt: "2026-08-25", createdAt: "2026-08-22", updatedAt: "2026-09-04", cvType: "finance" },
-  { id: "app-06", company: "Digitec Galaxus", position: "Account Manager", location: "Zürich", category: "sales", status: "preparing", matchScore: 76, createdAt: "2026-09-05", updatedAt: "2026-09-06", cvType: "sales" },
-  { id: "app-07", company: "Baloise", position: "Product Analyst", location: "Basel", category: "business", status: "interview", matchScore: 88, appliedAt: "2026-08-18", createdAt: "2026-08-12", updatedAt: "2026-09-02", cvType: "finance" },
-  { id: "app-08", company: "McKinsey & Company", position: "Business Analyst", location: "Zürich", category: "consulting", status: "saved", matchScore: 73, createdAt: "2026-09-03", updatedAt: "2026-09-03", cvType: "sales" },
-  { id: "app-09", company: "Roche", position: "Software Engineer", location: "Basel", category: "software", status: "applied", matchScore: 89, appliedAt: "2026-08-11", createdAt: "2026-08-08", updatedAt: "2026-08-11", cvType: "developer" },
-  { id: "app-10", company: "Swiss Re", position: "Risk Analyst", location: "Zürich", category: "finance", status: "rejected", matchScore: 71, appliedAt: "2026-07-27", createdAt: "2026-07-20", updatedAt: "2026-08-05", cvType: "finance" },
-  { id: "app-11", company: "NZZ Mediengruppe", position: "Digital Product Manager", location: "Zürich", category: "business", status: "offer", matchScore: 96, appliedAt: "2026-07-19", createdAt: "2026-07-15", updatedAt: "2026-08-29", cvType: "sales" },
-  { id: "app-12", company: "KPMG Switzerland", position: "Technology Consultant", location: "Zürich", category: "consulting", status: "applied", matchScore: 82, appliedAt: "2026-08-02", createdAt: "2026-07-29", updatedAt: "2026-08-02", cvType: "developer" },
+export const mockInvoices: Invoice[] = [
+  { id: "inv-01", invoiceNumber: "2026-001", customerName: "Pangea Wealth", issueDate: "2026-09-01", dueDate: "2026-09-15", status: "paid", currency: "CHF", items: [{ id: "item-1", description: "Webdesign und Entwicklung", quantity: 1, unitPrice: 4200, vatRate: 0 }], paidAt: "2026-09-12", createdAt: "2026-09-01", updatedAt: "2026-09-12" },
+  { id: "inv-02", invoiceNumber: "2026-002", customerName: "Ayleen Podgorny", issueDate: "2026-09-05", dueDate: "2026-09-19", status: "sent", currency: "CHF", items: [{ id: "item-2", description: "Website-Paket", quantity: 1, unitPrice: 1800, vatRate: 0 }], createdAt: "2026-09-05", updatedAt: "2026-09-05" },
+  { id: "inv-03", invoiceNumber: "2026-003", customerName: "Janik Plätscher", issueDate: "2026-09-08", dueDate: "2026-09-22", status: "draft", currency: "CHF", items: [{ id: "item-3", description: "Wartung und Content-System", quantity: 1, unitPrice: 950, vatRate: 0 }], createdAt: "2026-09-08", updatedAt: "2026-09-08" },
+];
+
+export const mockExpenses: Expense[] = [
+  { id: "exp-01", vendor: "Vercel", description: "Hosting", amount: 24, currency: "CHF", expenseDate: "2026-09-02", createdAt: "2026-09-02", updatedAt: "2026-09-02" },
+  { id: "exp-02", vendor: "Adobe", description: "Creative Cloud", amount: 65.45, currency: "CHF", expenseDate: "2026-09-03", createdAt: "2026-09-03", updatedAt: "2026-09-03" },
 ];

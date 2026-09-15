@@ -4,20 +4,61 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, BriefcaseBusiness, FileText, LayoutDashboard, LogOut, Menu, Settings, Sun, UserRound } from "lucide-react";
+import { Building2, ContactRound, FileArchive, FileText, LayoutDashboard, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { NotificationCenter } from "@/components/layout/notification-center";
 
-const navigation = [{ label: "Übersicht", href: "/dashboard", icon: LayoutDashboard }, { label: "Bewerbungen", href: "/applications", icon: BriefcaseBusiness }, { label: "Analysen", href: "/analytics", icon: BarChart3 }, { label: "Lebensläufe", href: "/cvs", icon: FileText }, { label: "Profil", href: "/profile", icon: UserRound }, { label: "Einstellungen", href: "/settings", icon: Settings }];
-const activeLabels: Record<string, string> = { Dashboard: "Übersicht", Applications: "Bewerbungen", Analytics: "Analysen", CVs: "Lebensläufe", Profile: "Profil", Settings: "Einstellungen", Übersicht: "Übersicht", Bewerbungen: "Bewerbungen", Analysen: "Analysen", Lebensläufe: "Lebensläufe", Profil: "Profil", Einstellungen: "Einstellungen" };
+const navigation = [
+  { label: "Übersicht", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Rechnungen", href: "/applications", icon: FileText },
+  { label: "Ausgaben", href: "/analytics", icon: ReceiptText },
+  { label: "Belege", href: "/cvs", icon: FileArchive },
+  { label: "Kunden", href: "/customers", icon: Users },
+  { label: "Workspace", href: "/workspace/projects", icon: PanelsTopLeft },
+  { label: "Prospects", href: "/prospects", icon: ContactRound },
+  { label: "Unternehmen", href: "/profile", icon: Building2 },
+  { label: "Einstellungen", href: "/settings", icon: Settings },
+];
 
-export function WorkspaceShell({ children, active, title = "WendApply" }: { children: React.ReactNode; active: string; title?: string }) {
-  const router = useRouter(); const [mobileOpen, setMobileOpen] = useState(false); const [user, setUser] = useState<User | null>(null); const [checkingSession, setCheckingSession] = useState(true); const [theme, setTheme] = useState<"dark" | "light">(() => typeof window !== "undefined" && window.localStorage.getItem("wendapply.theme") === "light" ? "light" : "dark"); const selectedLabel = activeLabels[active] ?? active; const displayTitle = title.replace("ApplyOS", "WendApply").replace("Overview", "Übersicht").replace("Applications", "Bewerbungen").replace("Application", "Bewerbung").replace("Analytics", "Analysen").replace("CV Library", "Lebenslauf-Bibliothek").replace("Profile", "Profil").replace("Settings", "Einstellungen").replace("New application", "Neue Bewerbung");
-  useEffect(() => { document.documentElement.classList.toggle("light", theme === "light"); window.localStorage.setItem("wendapply.theme", theme); window.dispatchEvent(new CustomEvent("wendapply-theme", { detail: theme })); }, [theme]);
-  useEffect(() => { let mounted = true; supabase.auth.getUser().then(({ data }) => { if (mounted) { setUser(data.user); setCheckingSession(false); } }); const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null)); return () => { mounted = false; listener.subscription.unsubscribe(); }; }, []);
+export function WorkspaceShell({ children, active, title = "Wendico" }: { children: React.ReactNode; active: string; title?: string }) {
+  const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [theme, setTheme] = useState<"dark" | "light">(() => typeof window !== "undefined" && window.localStorage.getItem("wendico-books.theme") === "light" ? "light" : "dark");
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+    window.localStorage.setItem("wendico-books.theme", theme);
+    window.dispatchEvent(new CustomEvent("wendico-books-theme", { detail: theme }));
+  }, [theme]);
+
+  useEffect(() => {
+    let mounted = true;
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      setCheckingSession(false);
+    });
+    return () => { mounted = false; listener.subscription.unsubscribe(); };
+  }, []);
+
   useEffect(() => { if (!checkingSession && !user) router.replace("/login"); }, [checkingSession, router, user]);
   async function logout() { await supabase.auth.signOut(); router.replace("/login"); }
-  if (checkingSession || !user) return <main className="workspace-bg flex min-h-screen items-center justify-center"><div className="panel rounded-2xl px-8 py-7 text-center"><div className="mx-auto h-10 w-10 animate-pulse rounded-xl bg-gradient-to-br from-[#287bff] to-[#55d4ff]" /><p className="mt-4 text-sm text-white">WendApply wird geladen...</p></div></main>;
-  const initials = (user.email?.slice(0, 2) ?? "WA").toUpperCase();
-  return <div className={`workspace-bg min-h-screen ${theme === "light" ? "light" : ""}`}><aside className="fixed inset-y-0 left-0 z-30 hidden w-[84px] flex-col items-center border-r border-white/10 bg-[#061022]/85 py-6 backdrop-blur-xl md:flex"><Link href="/dashboard" aria-label="WendApply Übersicht" className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf4ff] shadow-[0_0_25px_rgba(76,166,255,.28)]"><Image src="/logo.png" alt="WendApply" width={64} height={64} className="h-16 w-16 object-contain" priority /></Link><nav className="mt-12 flex flex-col gap-5">{navigation.map(({ label, href, icon: Icon }) => <Link key={label} href={href} title={label} className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${selectedLabel === label ? "bg-[#153a71] text-[#65c6ff] blue-glow" : "text-[#7185a6] hover:bg-white/5 hover:text-white"}`}><Icon size={18} strokeWidth={1.8} /></Link>)}</nav><button onClick={logout} aria-label="Abmelden" title="Abmelden" className="mt-auto flex h-10 w-10 items-center justify-center rounded-xl bg-[#13274a] text-[#87b9ff] hover:bg-[#3b202b] hover:text-[#ff9b91]"><LogOut size={17} /></button></aside>{mobileOpen && <div className="fixed inset-0 z-40 bg-[#020713]/75 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}><nav className="h-full w-[270px] border-r border-white/10 bg-[#071326] p-6" onClick={(event) => event.stopPropagation()}><div className="flex items-center gap-3"><Image src="/logo.png" alt="WendApply" width={72} height={72} className="h-16 w-16 rounded-2xl bg-[#edf4ff] object-contain" /><span className="text-lg font-semibold text-white">WendApply</span></div><div className="mt-10 space-y-2">{navigation.map(({ label, href, icon: Icon }) => <Link key={label} href={href} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${selectedLabel === label ? "bg-[#153a71] text-[#65c6ff]" : "text-[#8292ae]"}`}><Icon size={18} />{label}</Link>)}</div><button onClick={logout} className="mt-8 flex items-center gap-3 px-3 py-3 text-sm text-[#ff9b91]"><LogOut size={18} />Abmelden</button></nav></div>}<div className="md:pl-[84px]"><header className="flex h-[74px] items-center justify-between border-b border-white/10 bg-[#061022]/55 px-5 backdrop-blur-xl md:px-9"><div className="flex items-center gap-3"><button className="md:hidden" aria-label="Menü öffnen" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><span className="text-xs font-medium uppercase tracking-[.18em] text-[#7185a6]">{displayTitle}</span></div><div className="flex items-center gap-3"><button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Lightmode aktivieren" : "Darkmode aktivieren"} className="rounded-lg p-2 text-[#8292ae] hover:bg-white/10 hover:text-white"><Sun size={17} /></button><span className="hidden max-w-[220px] truncate text-xs text-[#7185a6] sm:block">{user.email}</span><div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#132f5c] text-[10px] font-bold text-[#8bc7ff]">{initials}</div></div></header><main className="mx-auto max-w-[1400px] px-5 py-7 md:px-9 md:py-9">{children}</main></div></div>;
+
+  if (checkingSession || !user) return <main className="workspace-bg flex min-h-screen items-center justify-center"><div className="panel rounded-2xl px-8 py-7 text-center"><div className="mx-auto h-10 w-10 animate-pulse rounded-xl bg-[#287bff]" /><p className="mt-4 text-sm text-white">Wendico wird geladen...</p></div></main>;
+
+  const initials = (user.email?.slice(0, 2) ?? "WE").toUpperCase();
+  const links = navigation.map(({ label, href, icon: Icon }) => <Link key={label} href={href} title={label} onClick={() => setMobileOpen(false)} className={`flex h-9 items-center justify-center gap-3 rounded-xl px-3 transition ${active === label ? "bg-[#153a71] text-[#65c6ff] blue-glow" : "text-[#7185a6] hover:bg-white/5 hover:text-white"}`}><Icon size={18} strokeWidth={1.8} /><span className="md:hidden">{label}</span></Link>);
+
+  return <div className={`workspace-bg min-h-screen ${theme === "light" ? "light" : ""}`}>
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[84px] flex-col items-center border-r border-white/10 bg-[#061022]/85 py-5 backdrop-blur-xl md:flex">
+      <Link href="/dashboard" aria-label="Wendico Übersicht" className="flex h-12 w-16 items-center justify-center"><Image src="/wendico-logo-v2.png" alt="Wendico" width={63} height={40} className="h-auto w-full object-contain" priority /></Link>
+      <nav className="mt-6 flex flex-col gap-2">{links}</nav>
+      <button onClick={logout} aria-label="Abmelden" title="Abmelden" className="mt-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#13274a] text-[#87b9ff]"><LogOut size={17} /></button>
+    </aside>
+    {mobileOpen && <div className="fixed inset-0 z-40 bg-[#020713]/75 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}><nav className="h-full w-[270px] border-r border-white/10 bg-[#071326] p-6" onClick={(event) => event.stopPropagation()}><div className="flex items-center gap-3"><span className="flex h-12 w-[76px] items-center"><Image src="/wendico-logo-v2.png" alt="Wendico" width={75} height={48} className="h-auto w-full object-contain" /></span><span className="font-semibold text-white">Wendico</span></div><div className="mt-8 space-y-2">{links}</div></nav></div>}
+    <main className="min-h-screen md:pl-[84px]"><header className="app-header sticky top-0 z-20 flex h-16 items-center justify-between px-5 md:px-8"><div className="flex min-w-0 items-center gap-3"><button className="header-icon-button md:hidden" onClick={() => setMobileOpen(true)} aria-label="Menü öffnen"><Menu size={21} /></button><span className="truncate text-sm font-semibold text-[var(--ink)]">{title}</span></div><div className="flex items-center gap-2"><NotificationCenter/><button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Darstellung wechseln" className="header-icon-button"><Sun size={17} /></button><span className="user-avatar">{initials}</span></div></header><div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">{children}</div></main>
+  </div>;
 }

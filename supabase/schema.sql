@@ -1,75 +1,259 @@
-create table if not exists public.applications (
+-- Run this file in the Supabase SQL editor.
+create table if not exists public.invoices (
   id text primary key,
-  user_id uuid references auth.users(id) on delete cascade,
-  company text not null,
-  position text not null,
-  location text,
-  job_url text,
-  source text,
-  category text not null,
-  salary_min numeric,
-  salary_max numeric,
-  currency text,
-  deadline date,
-  status text not null,
-  match_score numeric,
-  applied_at date,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  invoice_number text not null check (char_length(invoice_number) between 1 and 80),
+  customer_name text not null check (char_length(customer_name) between 1 and 200),
+  customer_email text,
+  customer_address text,
+  issue_date date not null,
+  due_date date not null,
+  status text not null check (status in ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
+  currency text not null default 'CHF',
+  items jsonb not null default '[]'::jsonb check (jsonb_typeof(items) = 'array'),
+  notes text,
+  paid_at date,
   created_at date not null,
   updated_at date not null,
-  cv_type text,
-  job_description text,
-  notes text
+  unique (user_id, invoice_number)
 );
 
-create table if not exists public.profiles (
+create table if not exists public.documents (
   id text primary key,
-  user_id uuid unique references auth.users(id) on delete cascade,
-  first_name text not null,
-  last_name text not null,
-  email text not null,
-  phone text,
-  location text,
-  website text,
-  linkedin text
-);
-
-create table if not exists public.cvs (
-  id text primary key,
-  user_id uuid references auth.users(id) on delete cascade,
-  name text not null,
-  type text not null,
-  description text not null,
-  updated_at date not null,
-  status text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 200),
+  type text not null default 'receipt',
+  document_date date not null,
+  description text,
   file_name text,
   storage_path text,
   file_type text,
-  file_size bigint
+  file_size bigint,
+  created_at date not null
 );
 
-alter table public.cvs add column if not exists file_name text;
-alter table public.cvs add column if not exists storage_path text;
-alter table public.cvs add column if not exists file_type text;
-alter table public.cvs add column if not exists file_size bigint;
+create table if not exists public.expenses (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  vendor text not null check (char_length(vendor) between 1 and 200),
+  description text not null check (char_length(description) between 1 and 500),
+  category text not null default 'other',
+  amount numeric(12,2) not null check (amount >= 0),
+  vat_amount numeric(12,2) not null default 0,
+  currency text not null default 'CHF',
+  expense_date date not null,
+  payment_method text,
+  document_id text references public.documents(id) on delete set null,
+  created_at date not null,
+  updated_at date not null
+);
 
-alter table public.applications add column if not exists user_id uuid references auth.users(id) on delete cascade;
-alter table public.profiles add column if not exists user_id uuid references auth.users(id) on delete cascade;
-alter table public.cvs add column if not exists user_id uuid references auth.users(id) on delete cascade;
+alter table public.documents alter column type set default 'receipt';
+alter table public.expenses alter column category set default 'other';
+alter table public.expenses alter column vat_amount set default 0;
 
-alter table public.applications enable row level security;
-alter table public.profiles enable row level security;
-alter table public.cvs enable row level security;
+create table if not exists public.company_profiles (
+  id text primary key,
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  company_name text not null check (char_length(company_name) between 1 and 200),
+  owner_name text not null,
+  email text not null,
+  phone text,
+  address text,
+  postal_code text,
+  city text,
+  country text not null default 'Schweiz',
+  website text,
+  vat_number text,
+  iban text,
+  default_currency text not null default 'CHF',
+  default_vat_rate numeric(5,2) not null default 0
+);
 
-drop policy if exists "local prototype applications access" on public.applications;
-drop policy if exists "local prototype profiles access" on public.profiles;
-drop policy if exists "local prototype cvs access" on public.cvs;
-drop policy if exists "authenticated users own applications" on public.applications;
-drop policy if exists "authenticated users own profiles" on public.profiles;
-drop policy if exists "authenticated users own cvs" on public.cvs;
-create policy "authenticated users own applications" on public.applications for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "authenticated users own profiles" on public.profiles for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "authenticated users own cvs" on public.cvs for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create table if not exists public.customers (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  company_name text not null check (char_length(company_name) between 1 and 200),
+  contact_name text,
+  email text,
+  phone text,
+  address text,
+  project text,
+  monthly_revenue numeric(12,2) not null default 0 check (monthly_revenue >= 0),
+  one_time_revenue numeric(12,2) not null default 0 check (one_time_revenue >= 0),
+  notes text,
+  created_at date not null,
+  updated_at date not null
+);
 
-insert into storage.buckets (id, name, public) values ('cvs', 'cvs', false) on conflict (id) do nothing;
-drop policy if exists "authenticated users manage cv files" on storage.objects;
-create policy "authenticated users manage cv files" on storage.objects for all to authenticated using (bucket_id = 'cvs' and auth.uid()::text = (storage.foldername(name))[1]) with check (bucket_id = 'cvs' and auth.uid()::text = (storage.foldername(name))[1]);
+alter table public.customers add column if not exists monthly_revenue numeric(12,2) not null default 0;
+alter table public.customers add column if not exists one_time_revenue numeric(12,2) not null default 0;
+
+create table if not exists public.prospects (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  company_name text not null,
+  contact_name text,
+  email text,
+  phone text,
+  source text,
+  status text not null check (status in ('new', 'contacted', 'meeting', 'offer', 'won', 'lost')),
+  last_contact_at date,
+  next_task text,
+  next_task_at date,
+  notes text,
+  created_at date not null,
+  updated_at date not null
+);
+
+create table if not exists public.push_subscriptions (
+  id bigint generated by default as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, endpoint)
+);
+
+create table if not exists public.push_deliveries (
+  id bigint generated by default as identity primary key,
+  subscription_id bigint not null references public.push_subscriptions(id) on delete cascade,
+  item_id text not null,
+  sent_on date not null default current_date,
+  created_at timestamptz not null default now(),
+  unique (subscription_id, item_id, sent_on)
+);
+
+create table if not exists public.workspace_items (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  module text not null check (module in ('projects', 'ideas', 'tasks', 'offers', 'people', 'commissions', 'leads', 'operations')),
+  title text not null check (char_length(title) between 1 and 200),
+  subtitle text,
+  description text,
+  status text not null,
+  priority text not null default 'medium' check (priority in ('low', 'medium', 'high')),
+  owner text,
+  contact_name text,
+  email text,
+  phone text,
+  amount numeric(12,2) check (amount is null or amount >= 0),
+  start_date date,
+  due_date date,
+  tags text[] not null default '{}',
+  created_at date not null,
+  updated_at date not null
+);
+
+create table if not exists public.workspace_files (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_id text not null references public.workspace_items(id) on delete cascade,
+  name text not null,
+  storage_path text not null unique,
+  file_type text,
+  file_size bigint,
+  created_at date not null
+);
+
+create table if not exists public.monthly_goals (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  month text not null check (month ~ '^\d{4}-(0[1-9]|1[0-2])$'),
+  revenue_target numeric(12,2) not null default 0 check (revenue_target >= 0),
+  recurring_revenue_target numeric(12,2) not null default 0 check (recurring_revenue_target >= 0),
+  expense_budget numeric(12,2) not null default 0 check (expense_budget >= 0),
+  notes text,
+  created_at date not null,
+  updated_at date not null,
+  unique (user_id, month)
+);
+
+alter table public.invoices enable row level security;
+alter table public.expenses enable row level security;
+alter table public.documents enable row level security;
+alter table public.company_profiles enable row level security;
+alter table public.customers enable row level security;
+alter table public.prospects enable row level security;
+alter table public.push_subscriptions enable row level security;
+alter table public.push_deliveries enable row level security;
+alter table public.workspace_items enable row level security;
+alter table public.workspace_files enable row level security;
+alter table public.monthly_goals enable row level security;
+
+drop policy if exists "users manage own invoices" on public.invoices;
+drop policy if exists "users manage own expenses" on public.expenses;
+drop policy if exists "users manage own documents" on public.documents;
+drop policy if exists "users manage own company profile" on public.company_profiles;
+drop policy if exists "users manage own customers" on public.customers;
+drop policy if exists "users manage own prospects" on public.prospects;
+drop policy if exists "users manage own push subscriptions" on public.push_subscriptions;
+drop policy if exists "users manage own workspace items" on public.workspace_items;
+drop policy if exists "users manage own workspace files" on public.workspace_files;
+drop policy if exists "users manage own monthly goals" on public.monthly_goals;
+create policy "users manage own invoices" on public.invoices for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own expenses" on public.expenses for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own documents" on public.documents for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own company profile" on public.company_profiles for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own customers" on public.customers for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own prospects" on public.prospects for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own push subscriptions" on public.push_subscriptions for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own workspace items" on public.workspace_items for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own workspace files" on public.workspace_files for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own monthly goals" on public.monthly_goals for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('documents', 'documents', false, 10485760, array['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "users manage own accounting documents" on storage.objects;
+create policy "users manage own accounting documents" on storage.objects for all to authenticated
+using (bucket_id = 'documents' and auth.uid()::text = (storage.foldername(name))[1])
+with check (bucket_id = 'documents' and auth.uid()::text = (storage.foldername(name))[1]);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('workspace-files', 'workspace-files', false, 15728640, array['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "users manage own workspace objects" on storage.objects;
+create policy "users manage own workspace objects" on storage.objects for all to authenticated
+using (bucket_id = 'workspace-files' and auth.uid()::text = (storage.foldername(name))[1])
+with check (bucket_id = 'workspace-files' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop function if exists public.is_app_member();
+
+create index if not exists invoices_user_issue_date_idx on public.invoices (user_id, issue_date desc);
+create index if not exists expenses_user_expense_date_idx on public.expenses (user_id, expense_date desc);
+create index if not exists documents_user_document_date_idx on public.documents (user_id, document_date desc);
+create index if not exists customers_user_company_name_idx on public.customers (user_id, company_name);
+create index if not exists prospects_user_updated_at_idx on public.prospects (user_id, updated_at desc);
+create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
+create index if not exists push_deliveries_sent_on_idx on public.push_deliveries (sent_on);
+create index if not exists workspace_items_user_module_idx on public.workspace_items (user_id, module, updated_at desc);
+create index if not exists workspace_files_item_id_idx on public.workspace_files (item_id);
+create index if not exists monthly_goals_user_month_idx on public.monthly_goals (user_id, month desc);
+
+create or replace function public.due_notifications()
+returns table (user_id uuid, item_id text, title text, body text, href text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select i.user_id, 'invoice-' || i.id, 'Rechnung ' || i.invoice_number,
+    i.customer_name || ' · fällig ' || to_char(i.due_date, 'DD.MM.YYYY'), '/applications/' || i.id
+  from public.invoices i
+  where i.status in ('sent', 'overdue') and i.due_date <= current_date
+  union all
+  select p.user_id, 'prospect-' || p.id, p.next_task,
+    p.company_name || ' · fällig ' || to_char(p.next_task_at, 'DD.MM.YYYY'), '/prospects'
+  from public.prospects p
+  where p.next_task is not null and p.next_task_at <= current_date and p.status not in ('won', 'lost')
+  union all
+  select w.user_id, 'workspace-' || w.id, w.title,
+    initcap(w.module) || ' · fällig ' || to_char(w.due_date, 'DD.MM.YYYY'), '/workspace/' || w.module
+  from public.workspace_items w
+  where w.due_date <= current_date and w.status not in ('Erledigt', 'Abgeschlossen', 'Bezahlt', 'Gewonnen', 'Archiviert', 'Angenommen', 'Abgelehnt', 'Verloren', 'Storniert', 'Ehemalig');
+$$;
+
+revoke all on function public.due_notifications() from public, anon, authenticated;
+grant execute on function public.due_notifications() to service_role;

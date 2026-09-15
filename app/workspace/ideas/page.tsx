@@ -1,0 +1,2 @@
+import { WorkspaceModulePage } from "@/components/workspace/workspace-module-page";
+export default function IdeasPage() { return <WorkspaceModulePage config={{ module: "ideas", navLabel: "Ideen", eyebrow: "Backlog", title: "Ideen", description: "Produktideen, Verbesserungen und Chancen sammeln, bewerten und weiterentwickeln.", addLabel: "Idee erfassen", titleLabel: "Idee", subtitleLabel: "Nutzen / Zielgruppe", statuses: ["Neu", "Prüfen", "Priorisiert", "Umsetzung", "Archiviert"], dateFields: true }} />; }

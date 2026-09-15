@@ -1,0 +1,2 @@
+import { WorkspaceModulePage } from "@/components/workspace/workspace-module-page";
+export default function ProjectsPage() { return <WorkspaceModulePage config={{ module: "projects", navLabel: "Projekte", eyebrow: "Delivery", title: "Projekte", description: "Kunden- und interne Projekte mit Status, Terminen, Zuständigkeit und Projektdateien.", addLabel: "Projekt hinzufügen", titleLabel: "Projektname", subtitleLabel: "Kunde / Bereich", statuses: ["Geplant", "Aktiv", "Blockiert", "Abgeschlossen", "Archiviert"], amountLabel: "Projektwert", dateFields: true, files: true }} />; }

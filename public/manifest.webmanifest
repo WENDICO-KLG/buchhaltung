@@ -1,0 +1,18 @@
+{
+  "name": "Wendico Buchhaltung",
+  "short_name": "Wendico",
+  "description": "Buchhaltung, Kunden und Prospects für Wendico KLG",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#13263a",
+  "icons": [
+    {
+      "src": "/icon.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

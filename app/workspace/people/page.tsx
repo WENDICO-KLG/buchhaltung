@@ -1,0 +1,2 @@
+import { WorkspaceModulePage } from "@/components/workspace/workspace-module-page";
+export default function PeoplePage() { return <WorkspaceModulePage config={{ module: "people", navLabel: "Team & Partner", eyebrow: "Netzwerk", title: "Mitarbeitende & Partner", description: "Interne Mitarbeitende, Freelancer und Partner mit Rolle, Kontakt und Zusammenarbeit verwalten.", addLabel: "Person hinzufügen", titleLabel: "Name / Firma", subtitleLabel: "Rolle / Kompetenz", statuses: ["Aktiv", "Verfügbar", "Pausiert", "Ehemalig"], contactFields: true, dateFields: true }} />; }
