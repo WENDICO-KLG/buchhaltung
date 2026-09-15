@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root { --ink: #f4f8ff; --muted: #8094b3; --line: rgba(105, 157, 224, .2); --paper: #030817; --blue: #4ca6ff; --cyan: #54d6ff; --orange: #f79b62; --navy: #071326; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+a { color: inherit; text-decoration: none; }
+.font-display { font-family: Georgia, "Times New Roman", serif; }
+.recharts-cartesian-axis-tick-value { fill: #8292ae; font-size: 11px; }
+.recharts-cartesian-grid-horizontal line { stroke: rgba(120, 161, 218, .12); }
+.recharts-tooltip-wrapper { outline: none; }
+.workspace-bg { background: radial-gradient(ellipse 70% 46% at 85% 4%, rgba(25, 91, 180, .32), transparent 68%), radial-gradient(ellipse 52% 42% at 100% 78%, rgba(218, 79, 35, .2), transparent 68%), #030817; }
+.panel { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(11, 29, 58, .95), rgba(5, 14, 31, .97)); box-shadow: inset 0 1px rgba(255,255,255,.055), inset 0 0 28px rgba(38,104,182,.035), 0 18px 50px rgba(0,0,0,.2); }
+.blue-glow { box-shadow: 0 0 0 1px rgba(76,166,255,.16), 0 0 25px rgba(76,166,255,.28); }
+.reference-border { border: 1px solid rgba(84, 167, 255, .25); box-shadow: inset 0 1px rgba(255,255,255,.05), 0 0 24px rgba(39,119,214,.09); }
+.reference-label { color: #91a9ca; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+.light { --ink: #14243a; --muted: #667892; --line: rgba(74, 112, 157, .18); --paper: #eef4fb; color: var(--ink); }
+.workspace-bg.light { background: radial-gradient(circle at 82% 8%, rgba(109, 185, 255, .22), transparent 30%), #eef4fb; }
+.light .panel { border-color: rgba(73, 116, 163, .2); background: rgba(255,255,255,.9); box-shadow: 0 14px 35px rgba(41,78,119,.1); }
+.light aside, .light header { background: rgba(255,255,255,.88); border-color: rgba(73,116,163,.16); }
+.light aside .bg-\[\#153a71\] { background: #dceeff; color: #1764a5; }
+.light input, .light select, .light textarea { color: #14243a; background: #f8fbff; border-color: rgba(73,116,163,.24); }
+.light input::placeholder, .light textarea::placeholder { color: #71839d; }
+.light .bg-white\/5 { background: rgba(33,82,133,.06); }
+.light .text-\[\#b9cbea\] { color: #38516d; }
+.light .text-\[\#8bd5ff\], .light .text-\[\#56c8ff\] { color: #176da9; }
+.light .bg-\[\#08172f\] { background: #f8fbff; }
+.light .text-white { color: #14243a; }
+.light .text-\[\#8292ae\], .light .text-\[\#7185a6\] { color: #667892; }
+.light .border-white\/10 { border-color: rgba(74,112,157,.18); }
+.light .text-\[\#dcecff\] { color: #203650; }
+
+@media (max-width: 767px) {
+  .desktop-sidebar { display: none; }
+}
