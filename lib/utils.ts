@@ -14,7 +14,8 @@ export const invoiceStatusLabels = {
 } as const;
 
 export function invoiceTotal(items: { quantity: number; unitPrice: number; vatRate: number }[]) {
-  return items.reduce((sum, item) => sum + item.quantity * item.unitPrice * (1 + item.vatRate / 100), 0);
+  const cents = items.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * (1 + item.vatRate / 100) * 100), 0);
+  return cents / 100;
 }
 
 export function formatCurrency(value: number, currency = "CHF") {

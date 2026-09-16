@@ -16,7 +16,10 @@ type DueNotification = {
   overdue: boolean;
 };
 
-const dateOnly = () => new Date().toISOString().slice(0, 10);
+const dateOnly = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 function collectNotifications(invoices: Invoice[], prospects: Prospect[], workspaceItems: WorkspaceItem[]): DueNotification[] {
   const today = dateOnly();
@@ -42,11 +45,13 @@ export function NotificationCenter() {
     catch { return []; }
   });
   const [pushError, setPushError] = useState("");
+  const [pushReady, setPushReady] = useState(false);
 
   useEffect(() => {
     let active = true;
     const refresh = () => Promise.all([getInvoices(), getProspects(), getDueWorkspaceItems()]).then(([invoices, prospects, workspaceItems]) => { if (active) setItems(collectNotifications(invoices, prospects, workspaceItems)); }).catch(() => undefined);
     void refresh();
+    if ("serviceWorker" in navigator) navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription()).then((subscription) => { if (active) setPushReady(Boolean(subscription)); }).catch(() => undefined);
     const interval = window.setInterval(refresh, 60_000);
     const onVisibilityChange = () => { if (document.visibilityState === "visible") void refresh(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -59,7 +64,9 @@ export function NotificationCenter() {
     if (permission !== "granted" || !visible.length) return;
     const today = dateOnly();
     const notifiedKey = `wendico.notified.${today}`;
-    const alreadyNotified = JSON.parse(window.localStorage.getItem(notifiedKey) ?? "[]") as string[];
+    let alreadyNotified: string[] = [];
+    try { alreadyNotified = JSON.parse(window.localStorage.getItem(notifiedKey) ?? "[]") as string[]; }
+    catch { window.localStorage.removeItem(notifiedKey); }
     const pending = visible.filter((item) => !alreadyNotified.includes(item.id));
     async function notify() {
       const registration = await navigator.serviceWorker?.ready;
@@ -85,6 +92,7 @@ export function NotificationCenter() {
       const existing = await registration.pushManager.getSubscription();
       const subscription = existing ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
       await savePushSubscription(subscription);
+      setPushReady(true);
     } catch { setPushError("Push konnte nicht aktiviert werden. Bitte versuche es erneut."); }
   }
 
@@ -101,7 +109,8 @@ export function NotificationCenter() {
     </button>
     {open && <div className="notification-popover">
       <div className="flex items-start justify-between border-b border-[var(--line)] px-4 py-3"><div><h2 className="text-sm font-semibold text-[var(--ink)]">Fälligkeiten</h2><p className="mt-0.5 text-xs text-[var(--muted)]">Rechnungen und nächste Aufgaben</p></div><button onClick={() => setOpen(false)} aria-label="Schließen" className="icon-button"><X size={16}/></button></div>
-      {permission === "default" && <div className="border-b border-[var(--line)] p-3"><button onClick={enableNotifications} className="primary w-full">Browser-Benachrichtigungen aktivieren</button></div>}
+      {(permission === "default" || permission === "granted" && !pushReady) && <div className="border-b border-[var(--line)] p-3"><button onClick={enableNotifications} className="primary w-full">{permission === "granted" ? "Push-Dienst verbinden" : "Browser-Benachrichtigungen aktivieren"}</button></div>}
+      {permission === "granted" && pushReady && <p className="border-b border-[var(--line)] px-4 py-3 text-xs font-semibold text-[#17b26a]">Push-Benachrichtigungen sind aktiv.</p>}
       {permission === "denied" && <p className="border-b border-[var(--line)] px-4 py-3 text-xs text-[var(--muted)]">Benachrichtigungen sind im Browser blockiert. Die Hinweise bleiben hier sichtbar.</p>}
       {pushError && <p className="border-b border-[var(--line)] px-4 py-3 text-xs text-[#b42318]">{pushError}</p>}
       <div className="max-h-[360px] overflow-y-auto">{visible.length ? visible.map((item) => <div key={item.id} className="notification-row"><Link href={item.href} onClick={() => setOpen(false)} className="flex min-w-0 flex-1 gap-3"><span className={item.overdue ? "notification-icon overdue" : "notification-icon"}>{item.kind === "invoice" ? <FileWarning size={16}/> : <CalendarClock size={16}/>}</span><span className="min-w-0"><strong className="block truncate text-sm text-[var(--ink)]">{item.title}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{item.detail}</span></span></Link><button onClick={() => dismiss(item.id)} title="Erledigt" aria-label={`${item.title} als erledigt markieren`} className="icon-button"><CheckCircle2 size={16}/></button></div>) : <div className="px-5 py-10 text-center text-sm text-[var(--muted)]">Aktuell ist nichts fällig.</div>}</div>

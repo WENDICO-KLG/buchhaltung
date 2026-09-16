@@ -47,7 +47,8 @@ export function WorkspaceModulePage({ config }: { config: WorkspaceModuleConfig 
   const filtered = useMemo(() => items
     .filter((item) => status === "all" || item.status === status)
     .filter((item) => `${item.title} ${item.subtitle ?? ""} ${item.owner ?? ""} ${item.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase())), [items, query, status]);
-  const due = items.filter((item) => item.dueDate && item.dueDate <= new Date().toISOString().slice(0, 10) && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status)).length;
+  const today = new Date(); const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const due = items.filter((item) => item.dueDate && item.dueDate <= todayKey && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status)).length;
   const totalAmount = items.reduce((sum, item) => sum + (item.amount ?? 0), 0);
 
   const update = (key: keyof FormValue, value: string) => setForm((current) => ({ ...current, [key]: value }));
