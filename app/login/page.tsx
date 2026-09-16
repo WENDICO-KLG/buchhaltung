@@ -43,7 +43,11 @@ export default function LoginPage() {
       else { setSuccess("Passwort aktualisiert. Du wirst weitergeleitet."); window.setTimeout(() => router.replace("/dashboard"), 800); }
       setLoading(false); return;
     }
-    const result = mode === "login" ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password });
+    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
+    const redirectOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? window.location.origin
+      : configuredOrigin && configuredOrigin.startsWith("https://") ? configuredOrigin : window.location.origin;
+    const result = mode === "login" ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: new URL("/auth/callback", redirectOrigin).toString() } });
     if (result.error) { setError("Anmeldung fehlgeschlagen. Bitte prüfe deine Angaben."); setLoading(false); return; }
     if (mode === "signup" && !result.data.session) { setSuccess("Konto erstellt. Bitte bestätige deine E-Mail-Adresse."); setLoading(false); return; }
     router.replace("/dashboard");

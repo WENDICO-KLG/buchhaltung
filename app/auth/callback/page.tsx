@@ -12,6 +12,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     let active = true;
     const code = searchParams.get("code");
+    const tokenHash = searchParams.get("token_hash");
     const authError = searchParams.get("error_description") ?? searchParams.get("error");
 
     if (authError) {
@@ -19,15 +20,18 @@ export default function AuthCallbackPage() {
       return () => { active = false; };
     }
 
-    if (!code) {
+    if (!code && !tokenHash) {
       router.replace("/login");
       return () => { active = false; };
     }
 
-    supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+    const sessionPromise = code
+      ? supabase.auth.exchangeCodeForSession(code)
+      : supabase.auth.verifyOtp({ token_hash: tokenHash as string, type: "email" });
+    sessionPromise.then(({ error: exchangeError }) => {
       if (!active) return;
       if (exchangeError) {
-        setError("Die Google-Anmeldung konnte nicht abgeschlossen werden.");
+        setError("Der Bestätigungslink ist ungültig oder abgelaufen.");
         return;
       }
       router.replace("/dashboard");
