@@ -27,7 +27,9 @@ export default function LoginPage() {
   async function signInWithGoogle() {
     setLoading(true); setError("");
     const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
-    const redirectOrigin = configuredOrigin && configuredOrigin.startsWith("https://") ? configuredOrigin : window.location.origin;
+    const redirectOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? window.location.origin
+      : configuredOrigin && configuredOrigin.startsWith("https://") ? configuredOrigin : window.location.origin;
     const { error: authError } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: new URL("/auth/callback", redirectOrigin).toString(), queryParams: { prompt: "select_account" } } });
     if (authError) { setError("Google-Anmeldung fehlgeschlagen. Bitte versuche es erneut."); setLoading(false); }
   }
