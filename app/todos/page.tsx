@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarClock, Check, ContactRound, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { CalendarClock, Check, ContactRound, MessageSquare, Pencil, Plus, Send, Trash2, Users, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { createTodo, deleteTodo, getCustomers, getProspects, getTodos, updateTodo } from "@/lib/storage";
-import type { Customer, Prospect, Todo, TodoStatus } from "@/types";
+import { createTodo, createTodoComment, deleteTodo, getCustomers, getProspects, getTodoComments, getTodos, updateTodo } from "@/lib/storage";
+import type { Customer, Prospect, Todo, TodoComment, TodoStatus } from "@/types";
 
 const statusLabels: Record<TodoStatus, string> = { not_started: "Nicht gestartet", in_progress: "In Bearbeitung", done: "Erledigt" };
 const statusShort: Record<TodoStatus, string> = { not_started: "Offen", in_progress: "Aktiv", done: "Fertig" };
@@ -19,6 +19,7 @@ export default function TodosPage() {
   const [todos, setTodos] = useState<Todo[]>([]); const [customers, setCustomers] = useState<Customer[]>([]); const [prospects, setProspects] = useState<Prospect[]>([]); const [error, setError] = useState("");
   const [filter, setFilter] = useState<TodoStatus | "all">("all");
   const [title, setTitle] = useState(""); const [dueDate, setDueDate] = useState(""); const [link, setLink] = useState<LinkChoice>("");
+  const [detailId, setDetailId] = useState<string>();
 
   useEffect(() => { Promise.all([getTodos(), getCustomers(), getProspects()]).then(([todoData, customerData, prospectData]) => { setTodos(todoData); setCustomers(customerData); setProspects(prospectData); }).catch((cause) => setError(cause instanceof Error ? cause.message : "To-Dos konnten nicht geladen werden.")); }, []);
 
@@ -49,8 +50,11 @@ export default function TodosPage() {
 
   async function remove(id: string) {
     setTodos((current) => current.filter((todo) => todo.id !== id));
+    if (detailId === id) setDetailId(undefined);
     try { await deleteTodo(id); } catch (cause) { setError(cause instanceof Error ? cause.message : "To-Do konnte nicht gelöscht werden."); }
   }
+
+  const detailTodo = todos.find((todo) => todo.id === detailId);
 
   return <WorkspaceShell active="To-Dos" title="Wendico / To-Dos">
     <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase tracking-[.18em] text-[#56c8ff]">Aufgaben</p><h1 className="mt-3 text-3xl font-semibold text-white">To-Dos</h1><p className="mt-2 text-sm text-[#8292ae]">Aufgaben mit Fälligkeit, verknüpft mit Kunden oder Prospects.</p></div></div>
@@ -67,16 +71,18 @@ export default function TodosPage() {
     </form>
     <div className="mt-6 flex gap-2 overflow-x-auto pb-1">{filters.map((value) => <button key={value} onClick={() => setFilter(value)} className={filter === value ? "filter-active" : "filter"}>{value === "all" ? "Alle" : statusLabels[value]}</button>)}</div>
     <div className="mt-4 space-y-2">
-      {filtered.map((todo) => <TodoRow key={todo.id} todo={todo} customers={customers} prospects={prospects} customerName={customerName.get(todo.customerId ?? "")} prospectName={prospectName.get(todo.prospectId ?? "")} onStatusChange={(status) => setStatus(todo.id, status)} onEdit={(changes) => saveEdit(todo.id, changes)} onDelete={() => remove(todo.id)}/>)}
+      {filtered.map((todo) => <TodoRow key={todo.id} todo={todo} customers={customers} prospects={prospects} customerName={customerName.get(todo.customerId ?? "")} prospectName={prospectName.get(todo.prospectId ?? "")} onStatusChange={(status) => setStatus(todo.id, status)} onEdit={(changes) => saveEdit(todo.id, changes)} onDelete={() => remove(todo.id)} onOpen={() => setDetailId(todo.id)}/>)}
       {!filtered.length && <div className="panel rounded-2xl py-14 text-center text-sm text-[#8292ae]">Keine To-Dos in dieser Ansicht.</div>}
     </div>
+    {detailTodo && <TodoDetailModal todo={detailTodo} customerName={customerName.get(detailTodo.customerId ?? "")} prospectName={prospectName.get(detailTodo.prospectId ?? "")} onClose={() => setDetailId(undefined)} onStatusChange={(status) => setStatus(detailTodo.id, status)}/>}
   </WorkspaceShell>;
 }
 
-function TodoRow({ todo, customers, prospects, customerName, prospectName, onStatusChange, onEdit, onDelete }: { todo: Todo; customers: Customer[]; prospects: Prospect[]; customerName?: string; prospectName?: string; onStatusChange: (status: TodoStatus) => void; onEdit: (changes: { title: string; dueDate?: string; customerId?: string; prospectId?: string }) => void; onDelete: () => void }) {
+function TodoRow({ todo, customers, prospects, customerName, prospectName, onStatusChange, onEdit, onDelete, onOpen }: { todo: Todo; customers: Customer[]; prospects: Prospect[]; customerName?: string; prospectName?: string; onStatusChange: (status: TodoStatus) => void; onEdit: (changes: { title: string; dueDate?: string; customerId?: string; prospectId?: string }) => void; onDelete: () => void; onOpen: () => void }) {
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
+  const wasDragged = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(todo.title);
   const [editDueDate, setEditDueDate] = useState(todo.dueDate ?? "");
@@ -93,16 +99,22 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
 
   function onPointerDown(event: React.PointerEvent) {
     if (isEditing) return;
+    wasDragged.current = false;
     if ((event.target as HTMLElement).closest("button, select, input, a")) return;
     startX.current = event.clientX; setDragging(true); (event.target as HTMLElement).setPointerCapture(event.pointerId);
   }
-  function onPointerMove(event: React.PointerEvent) { if (!dragging) return; setDragX(event.clientX - startX.current); }
+  function onPointerMove(event: React.PointerEvent) { if (!dragging) return; const delta = event.clientX - startX.current; if (Math.abs(delta) > 8) wasDragged.current = true; setDragX(delta); }
   function onPointerUp() {
     if (!dragging) return;
     setDragging(false);
     if (dragX <= -SWIPE_THRESHOLD) { setDragX(0); if (window.confirm("To-Do wirklich löschen?")) onDelete(); return; }
     if (dragX >= SWIPE_THRESHOLD) { onStatusChange("done"); }
     setDragX(0);
+  }
+  function onRowClick(event: React.MouseEvent) {
+    if ((event.target as HTMLElement).closest("button, select, input, a")) return;
+    if (wasDragged.current) { wasDragged.current = false; return; }
+    onOpen();
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -127,8 +139,9 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClick={onRowClick}
       style={{ transform: `translateX(${dragX}px)`, transition: dragging ? "none" : "transform .2s ease" }}
-      className={`panel relative flex touch-pan-y flex-col gap-2 rounded-2xl p-4 ${todo.status === "done" ? "opacity-60" : ""}`}
+      className={`panel relative flex cursor-pointer touch-pan-y flex-col gap-2 rounded-2xl p-4 ${todo.status === "done" ? "opacity-60" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className={`min-w-0 flex-1 text-sm font-semibold text-white ${todo.status === "done" ? "line-through" : ""}`}>{todo.title}</p>
@@ -145,6 +158,54 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
         {prospectName && <span className="flex max-w-[9rem] items-center gap-1 truncate whitespace-nowrap rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><ContactRound size={11} className="shrink-0"/><span className="truncate">{prospectName}</span></span>}
         <button onClick={startEdit} aria-label="To-Do bearbeiten" className="icon-button sm:hidden"><Pencil size={12}/></button>
       </div>
+    </div>
+  </div>;
+}
+
+function TodoDetailModal({ todo, customerName, prospectName, onClose, onStatusChange }: { todo: Todo; customerName?: string; prospectName?: string; onClose: () => void; onStatusChange: (status: TodoStatus) => void }) {
+  const [comments, setComments] = useState<TodoComment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getTodoComments(todo.id).then((data) => { if (active) setComments(data); }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Kommentare konnten nicht geladen werden."); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [todo.id]);
+
+  async function submitComment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!body.trim()) return;
+    try { const comment = await createTodoComment(todo.id, body.trim()); setComments((current) => [...current, comment]); setBody(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Kommentar konnte nicht gespeichert werden."); }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = Boolean(todo.dueDate && todo.dueDate < today && todo.status !== "done");
+
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="panel flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl p-5" onClick={(event) => event.stopPropagation()}>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-lg font-semibold text-white">{todo.title}</h2>
+        <button onClick={onClose} aria-label="Schließen" className="icon-button"><X size={16}/></button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#8292ae]">
+        <button onClick={() => onStatusChange(statusOrder[(statusOrder.indexOf(todo.status) + 1) % statusOrder.length])} className={`rounded-full border border-white/10 px-2 py-0.5 text-[11px] font-semibold ${statusColor[todo.status]}`}>{statusShort[todo.status]}</button>
+        {todo.dueDate && <span className={`flex items-center gap-1 ${overdue ? "text-[#ff8f85]" : ""}`}><CalendarClock size={12}/>{new Date(`${todo.dueDate}T12:00:00`).toLocaleDateString("de-CH")}</span>}
+        {customerName && <span className="flex items-center gap-1 rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><Users size={11}/>{customerName}</span>}
+        {prospectName && <span className="flex items-center gap-1 rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><ContactRound size={11}/>{prospectName}</span>}
+      </div>
+      {error && <div className="mt-3 rounded-xl border border-[#6e3340] bg-[#24131e] px-3 py-2 text-xs text-[#ffaaa0]">{error}</div>}
+      <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#8292ae]"><MessageSquare size={14}/>Kommentare</div>
+      <div className="mt-2 flex-1 space-y-2 overflow-y-auto">
+        {loading && <p className="text-xs text-[#8292ae]">Lädt...</p>}
+        {!loading && !comments.length && <p className="text-xs text-[#8292ae]">Noch keine Kommentare.</p>}
+        {comments.map((comment) => <div key={comment.id} className="rounded-xl bg-[var(--surface-soft)] px-3 py-2"><p className="text-sm text-white">{comment.body}</p><p className="mt-1 text-[11px] text-[#8292ae]">{new Date(comment.createdAt).toLocaleString("de-CH")}</p></div>)}
+      </div>
+      <form onSubmit={submitComment} className="mt-3 flex gap-2">
+        <input value={body} onChange={(event) => setBody(event.target.value)} placeholder="Kommentar schreiben..." className="field flex-1"/>
+        <button className="primary flex items-center justify-center px-3" aria-label="Kommentar senden"><Send size={16}/></button>
+      </form>
     </div>
   </div>;
 }

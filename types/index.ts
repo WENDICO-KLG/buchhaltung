@@ -16,6 +16,13 @@ export interface Todo {
     updatedAt: string;
   }
 
+export interface TodoComment {
+    id: string;
+    todoId: string;
+    body: string;
+    createdAt: string;
+  }
+
 export interface InvoiceItem {
     id: string;
     description: string;

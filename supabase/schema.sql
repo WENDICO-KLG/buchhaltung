@@ -190,6 +190,14 @@ create table if not exists public.todos (
   updated_at date not null
 );
 
+create table if not exists public.todo_comments (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  todo_id text not null references public.todos(id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+
 alter table public.invoices enable row level security;
 alter table public.expenses enable row level security;
 alter table public.documents enable row level security;
@@ -202,6 +210,7 @@ alter table public.workspace_items enable row level security;
 alter table public.workspace_files enable row level security;
 alter table public.monthly_goals enable row level security;
 alter table public.todos enable row level security;
+alter table public.todo_comments enable row level security;
 
 drop policy if exists "users manage own invoices" on public.invoices;
 drop policy if exists "users manage own expenses" on public.expenses;
@@ -214,6 +223,7 @@ drop policy if exists "users manage own workspace items" on public.workspace_ite
 drop policy if exists "users manage own workspace files" on public.workspace_files;
 drop policy if exists "users manage own monthly goals" on public.monthly_goals;
 drop policy if exists "users manage own todos" on public.todos;
+drop policy if exists "users manage own todo comments" on public.todo_comments;
 create policy "users manage own invoices" on public.invoices for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own expenses" on public.expenses for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own documents" on public.documents for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -225,6 +235,7 @@ create policy "users manage own workspace items" on public.workspace_items for a
 create policy "users manage own workspace files" on public.workspace_files for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own monthly goals" on public.monthly_goals for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own todos" on public.todos for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own todo comments" on public.todo_comments for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('documents', 'documents', false, 10485760, array['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])
@@ -267,6 +278,7 @@ create index if not exists workspace_files_item_id_idx on public.workspace_files
 create index if not exists monthly_goals_user_month_idx on public.monthly_goals (user_id, month desc);
 create index if not exists todos_user_due_date_idx on public.todos (user_id, due_date);
 create index if not exists todos_user_status_idx on public.todos (user_id, status);
+create index if not exists todo_comments_todo_id_idx on public.todo_comments (todo_id, created_at);
 
 create or replace function public.valid_invoice_items(items jsonb)
 returns boolean
