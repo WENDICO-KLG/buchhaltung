@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { Bell, BellRing, CalendarClock, CheckCircle2, FileWarning, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getDueWorkspaceItems, getInvoices, getProspects, savePushSubscription } from "@/lib/storage";
-import type { Invoice, Prospect, WorkspaceItem } from "@/types";
+import { getDueWorkspaceItems, getInvoices, getProspects, getTodos, savePushSubscription } from "@/lib/storage";
+import type { Invoice, Prospect, Todo, WorkspaceItem } from "@/types";
 
 type DueNotification = {
   id: string;
@@ -21,7 +21,7 @@ const dateOnly = () => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-function collectNotifications(invoices: Invoice[], prospects: Prospect[], workspaceItems: WorkspaceItem[]): DueNotification[] {
+function collectNotifications(invoices: Invoice[], prospects: Prospect[], workspaceItems: WorkspaceItem[], todos: Todo[]): DueNotification[] {
   const today = dateOnly();
   const invoiceNotifications = invoices
     .filter((invoice) => ["sent", "overdue"].includes(invoice.status) && invoice.dueDate <= today)
@@ -32,7 +32,10 @@ function collectNotifications(invoices: Invoice[], prospects: Prospect[], worksp
   const workspaceNotifications = workspaceItems
     .filter((item) => item.dueDate && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status))
     .map((item) => ({ id: `workspace-${item.id}`, title: item.title, detail: `${moduleLabel(item.module)} · fällig ${formatDate(item.dueDate as string)}`, date: item.dueDate as string, href: `/workspace/${item.module}`, kind: "task" as const, overdue: (item.dueDate as string) < today }));
-  return [...invoiceNotifications, ...taskNotifications, ...workspaceNotifications].sort((a, b) => a.date.localeCompare(b.date));
+  const todoNotifications = todos
+    .filter((todo) => todo.dueDate && todo.dueDate <= today && todo.status !== "done")
+    .map((todo) => ({ id: `todo-${todo.id}`, title: todo.title, detail: `To-Do · fällig ${formatDate(todo.dueDate as string)}`, date: todo.dueDate as string, href: "/todos", kind: "task" as const, overdue: (todo.dueDate as string) < today }));
+  return [...invoiceNotifications, ...taskNotifications, ...workspaceNotifications, ...todoNotifications].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export function NotificationCenter() {
@@ -49,7 +52,7 @@ export function NotificationCenter() {
 
   useEffect(() => {
     let active = true;
-    const refresh = () => Promise.all([getInvoices(), getProspects(), getDueWorkspaceItems()]).then(([invoices, prospects, workspaceItems]) => { if (active) setItems(collectNotifications(invoices, prospects, workspaceItems)); }).catch(() => undefined);
+    const refresh = () => Promise.all([getInvoices(), getProspects(), getDueWorkspaceItems(), getTodos()]).then(([invoices, prospects, workspaceItems, todos]) => { if (active) setItems(collectNotifications(invoices, prospects, workspaceItems, todos)); }).catch(() => undefined);
     void refresh();
     if ("serviceWorker" in navigator) navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription()).then((subscription) => { if (active) setPushReady(Boolean(subscription)); }).catch(() => undefined);
     const interval = window.setInterval(refresh, 60_000);

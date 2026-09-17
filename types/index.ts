@@ -2,6 +2,19 @@ export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 export type ProspectStatus = "new" | "contacted" | "meeting" | "offer" | "won" | "lost";
 export type WorkspaceModule = "projects" | "ideas" | "tasks" | "offers" | "people" | "commissions" | "leads" | "operations";
 export type WorkspacePriority = "low" | "medium" | "high";
+export type TodoStatus = "not_started" | "in_progress" | "done";
+
+export interface Todo {
+    id: string;
+    title: string;
+    notes?: string;
+    status: TodoStatus;
+    dueDate?: string;
+    customerId?: string;
+    prospectId?: string;
+    createdAt: string;
+    updatedAt: string;
+  }
 
 export interface InvoiceItem {
     id: string;

@@ -4,13 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ContactRound, FileArchive, FileText, LayoutDashboard, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
+import { Building2, ContactRound, FileArchive, FileText, LayoutDashboard, ListTodo, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { NotificationCenter } from "@/components/layout/notification-center";
 
 const navigation = [
   { label: "Übersicht", href: "/dashboard", icon: LayoutDashboard },
+  { label: "To-Dos", href: "/todos", icon: ListTodo },
   { label: "Rechnungen", href: "/applications", icon: FileText },
   { label: "Ausgaben", href: "/analytics", icon: ReceiptText },
   { label: "Belege", href: "/cvs", icon: FileArchive },
@@ -20,6 +21,7 @@ const navigation = [
   { label: "Unternehmen", href: "/profile", icon: Building2 },
   { label: "Einstellungen", href: "/settings", icon: Settings },
 ];
+
 
 export function WorkspaceShell({ children, active, title = "Wendico" }: { children: React.ReactNode; active: string; title?: string }) {
   const router = useRouter();

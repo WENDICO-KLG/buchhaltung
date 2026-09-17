@@ -177,6 +177,19 @@ create table if not exists public.monthly_goals (
   unique (user_id, month)
 );
 
+create table if not exists public.todos (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null check (char_length(title) between 1 and 200),
+  notes text,
+  status text not null default 'not_started' check (status in ('not_started', 'in_progress', 'done')),
+  due_date date,
+  customer_id text references public.customers(id) on delete set null,
+  prospect_id text references public.prospects(id) on delete set null,
+  created_at date not null,
+  updated_at date not null
+);
+
 alter table public.invoices enable row level security;
 alter table public.expenses enable row level security;
 alter table public.documents enable row level security;
@@ -188,6 +201,7 @@ alter table public.push_deliveries enable row level security;
 alter table public.workspace_items enable row level security;
 alter table public.workspace_files enable row level security;
 alter table public.monthly_goals enable row level security;
+alter table public.todos enable row level security;
 
 drop policy if exists "users manage own invoices" on public.invoices;
 drop policy if exists "users manage own expenses" on public.expenses;
@@ -199,6 +213,7 @@ drop policy if exists "users manage own push subscriptions" on public.push_subsc
 drop policy if exists "users manage own workspace items" on public.workspace_items;
 drop policy if exists "users manage own workspace files" on public.workspace_files;
 drop policy if exists "users manage own monthly goals" on public.monthly_goals;
+drop policy if exists "users manage own todos" on public.todos;
 create policy "users manage own invoices" on public.invoices for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own expenses" on public.expenses for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own documents" on public.documents for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -209,6 +224,7 @@ create policy "users manage own push subscriptions" on public.push_subscriptions
 create policy "users manage own workspace items" on public.workspace_items for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own workspace files" on public.workspace_files for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users manage own monthly goals" on public.monthly_goals for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users manage own todos" on public.todos for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('documents', 'documents', false, 10485760, array['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])
@@ -249,6 +265,8 @@ create index if not exists push_deliveries_sent_on_idx on public.push_deliveries
 create index if not exists workspace_items_user_module_idx on public.workspace_items (user_id, module, updated_at desc);
 create index if not exists workspace_files_item_id_idx on public.workspace_files (item_id);
 create index if not exists monthly_goals_user_month_idx on public.monthly_goals (user_id, month desc);
+create index if not exists todos_user_due_date_idx on public.todos (user_id, due_date);
+create index if not exists todos_user_status_idx on public.todos (user_id, status);
 
 create or replace function public.valid_invoice_items(items jsonb)
 returns boolean
@@ -290,7 +308,12 @@ as $$
   select w.user_id, 'workspace-' || w.id, w.title,
     initcap(w.module) || ' · fällig ' || to_char(w.due_date, 'DD.MM.YYYY'), '/workspace/' || w.module
   from public.workspace_items w
-  where w.due_date <= current_date and w.status not in ('Erledigt', 'Abgeschlossen', 'Bezahlt', 'Gewonnen', 'Archiviert', 'Angenommen', 'Abgelehnt', 'Verloren', 'Storniert', 'Ehemalig');
+  where w.due_date <= current_date and w.status not in ('Erledigt', 'Abgeschlossen', 'Bezahlt', 'Gewonnen', 'Archiviert', 'Angenommen', 'Abgelehnt', 'Verloren', 'Storniert', 'Ehemalig')
+  union all
+  select t.user_id, 'todo-' || t.id, t.title,
+    'To-Do · fällig ' || to_char(t.due_date, 'DD.MM.YYYY'), '/todos'
+  from public.todos t
+  where t.due_date is not null and t.due_date <= current_date and t.status <> 'done';
 $$;
 
 revoke all on function public.due_notifications() from public, anon, authenticated;
