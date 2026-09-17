@@ -7,6 +7,6 @@ export const mockInvoices: Invoice[] = [
 ];
 
 export const mockExpenses: Expense[] = [
-  { id: "exp-01", vendor: "Vercel", description: "Hosting", amount: 24, currency: "CHF", expenseDate: "2026-09-02", createdAt: "2026-09-02", updatedAt: "2026-09-02" },
-  { id: "exp-02", vendor: "Adobe", description: "Creative Cloud", amount: 65.45, currency: "CHF", expenseDate: "2026-09-03", createdAt: "2026-09-03", updatedAt: "2026-09-03" },
+  { id: "exp-01", vendor: "Vercel", description: "Hosting", amount: 24, currency: "CHF", expenseDate: "2026-09-02", isRecurring: true, recurringInterval: "monthly", createdAt: "2026-09-02", updatedAt: "2026-09-02" },
+  { id: "exp-02", vendor: "Adobe", description: "Creative Cloud", amount: 65.45, currency: "CHF", expenseDate: "2026-09-03", isRecurring: true, recurringInterval: "monthly", createdAt: "2026-09-03", updatedAt: "2026-09-03" },
 ];

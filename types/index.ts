@@ -28,6 +28,8 @@ export interface Invoice {
     updatedAt: string;
   }
 
+export type RecurringInterval = "monthly" | "yearly";
+
 export interface Expense {
     id: string;
     vendor: string;
@@ -35,6 +37,8 @@ export interface Expense {
     amount: number;
     currency: string;
     expenseDate: string;
+    isRecurring: boolean;
+    recurringInterval?: RecurringInterval;
     createdAt: string;
     updatedAt: string;
   }
@@ -92,6 +96,7 @@ export interface CompanyProfile {
     lastContactAt?: string;
     nextTask?: string;
     nextTaskAt?: string;
+    estimatedValue?: number;
     notes?: string;
     createdAt: string;
     updatedAt: string;

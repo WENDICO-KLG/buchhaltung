@@ -44,6 +44,8 @@ create table if not exists public.expenses (
   expense_date date not null,
   payment_method text,
   document_id text references public.documents(id) on delete set null,
+  is_recurring boolean not null default false,
+  recurring_interval text check (recurring_interval in ('monthly', 'yearly')),
   created_at date not null,
   updated_at date not null
 );
@@ -51,6 +53,8 @@ create table if not exists public.expenses (
 alter table public.documents alter column type set default 'receipt';
 alter table public.expenses alter column category set default 'other';
 alter table public.expenses alter column vat_amount set default 0;
+alter table public.expenses add column if not exists is_recurring boolean not null default false;
+alter table public.expenses add column if not exists recurring_interval text;
 
 create table if not exists public.company_profiles (
   id text primary key,
@@ -101,6 +105,7 @@ create table if not exists public.prospects (
   last_contact_at date,
   next_task text,
   next_task_at date,
+  estimated_value numeric(12,2) check (estimated_value >= 0),
   notes text,
   created_at date not null,
   updated_at date not null
