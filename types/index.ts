@@ -81,6 +81,7 @@ export interface CompanyProfile {
     monthlyRevenue: number;
     oneTimeRevenue: number;
     notes?: string;
+    logoUrl?: string;
     createdAt: string;
     updatedAt: string;
   }
