@@ -91,12 +91,16 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
     setIsEditing(false);
   }
 
-  function onPointerDown(event: React.PointerEvent) { if (isEditing) return; startX.current = event.clientX; setDragging(true); (event.target as HTMLElement).setPointerCapture(event.pointerId); }
+  function onPointerDown(event: React.PointerEvent) {
+    if (isEditing) return;
+    if ((event.target as HTMLElement).closest("button, select, input, a")) return;
+    startX.current = event.clientX; setDragging(true); (event.target as HTMLElement).setPointerCapture(event.pointerId);
+  }
   function onPointerMove(event: React.PointerEvent) { if (!dragging) return; setDragX(event.clientX - startX.current); }
   function onPointerUp() {
     if (!dragging) return;
     setDragging(false);
-    if (dragX <= -SWIPE_THRESHOLD) { onDelete(); return; }
+    if (dragX <= -SWIPE_THRESHOLD) { setDragX(0); if (window.confirm("To-Do wirklich löschen?")) onDelete(); return; }
     if (dragX >= SWIPE_THRESHOLD) { onStatusChange("done"); }
     setDragX(0);
   }
@@ -117,7 +121,7 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
   </form>;
 
   return <div className="relative overflow-hidden rounded-2xl">
-    <div className="absolute inset-0 flex items-center justify-between px-6 text-sm font-semibold"><span className="flex items-center gap-2 text-[#17b26a]"><Check size={16}/>Erledigt</span><span className="flex items-center gap-2 text-[#ff8f85]">Löschen<Trash2 size={16}/></span></div>
+    <div style={{ opacity: dragX !== 0 ? Math.min(Math.abs(dragX) / SWIPE_THRESHOLD, 1) : 0, transition: dragging ? "none" : "opacity .2s ease" }} className="absolute inset-0 flex items-center justify-between px-6 text-sm font-semibold"><span className="flex items-center gap-2 text-[#17b26a]"><Check size={16}/>Erledigt</span><span className="flex items-center gap-2 text-[#ff8f85]">Löschen<Trash2 size={16}/></span></div>
     <div
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -131,14 +135,14 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
         <div className="hidden shrink-0 gap-1 sm:flex">
           <button onClick={startEdit} aria-label="To-Do bearbeiten" className="icon-button"><Pencil size={15}/></button>
           <button onClick={() => onStatusChange("done")} aria-label="Als erledigt markieren" className="icon-button"><Check size={15}/></button>
-          <button onClick={onDelete} aria-label="To-Do löschen" className="icon-button text-[#ff8f85]"><Trash2 size={15}/></button>
+          <button onClick={() => { if (window.confirm("To-Do wirklich löschen?")) onDelete(); }} aria-label="To-Do löschen" className="icon-button text-[#ff8f85]"><Trash2 size={15}/></button>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-[#8292ae]">
         <button onClick={cycleStatus} className={`rounded-full border border-white/10 px-2 py-0.5 text-[11px] font-semibold ${statusColor[todo.status]}`}>{statusShort[todo.status]}</button>
         {todo.dueDate && <span className={`flex items-center gap-1 ${overdue ? "text-[#ff8f85]" : ""}`}><CalendarClock size={12}/>{new Date(`${todo.dueDate}T12:00:00`).toLocaleDateString("de-CH")}</span>}
-        {customerName && <span className="flex items-center gap-1 truncate rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><Users size={11}/>{customerName}</span>}
-        {prospectName && <span className="flex items-center gap-1 truncate rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><ContactRound size={11}/>{prospectName}</span>}
+        {customerName && <span className="flex max-w-[9rem] items-center gap-1 truncate whitespace-nowrap rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><Users size={11} className="shrink-0"/><span className="truncate">{customerName}</span></span>}
+        {prospectName && <span className="flex max-w-[9rem] items-center gap-1 truncate whitespace-nowrap rounded-full bg-[#153a71] px-2 py-0.5 text-[11px] text-[#8edaff]"><ContactRound size={11} className="shrink-0"/><span className="truncate">{prospectName}</span></span>}
         <button onClick={startEdit} aria-label="To-Do bearbeiten" className="icon-button sm:hidden"><Pencil size={12}/></button>
       </div>
     </div>
