@@ -59,6 +59,8 @@ export interface Expense {
     expenseDate: string;
     isRecurring: boolean;
     recurringInterval?: RecurringInterval;
+    recurringStartDate?: string;
+    recurringEndDate?: string;
     createdAt: string;
     updatedAt: string;
   }

@@ -46,6 +46,8 @@ create table if not exists public.expenses (
   document_id text references public.documents(id) on delete set null,
   is_recurring boolean not null default false,
   recurring_interval text check (recurring_interval in ('monthly', 'yearly')),
+  recurring_start_date date,
+  recurring_end_date date,
   created_at date not null,
   updated_at date not null
 );
@@ -55,6 +57,8 @@ alter table public.expenses alter column category set default 'other';
 alter table public.expenses alter column vat_amount set default 0;
 alter table public.expenses add column if not exists is_recurring boolean not null default false;
 alter table public.expenses add column if not exists recurring_interval text;
+alter table public.expenses add column if not exists recurring_start_date date;
+alter table public.expenses add column if not exists recurring_end_date date;
 
 create table if not exists public.company_profiles (
   id text primary key,
