@@ -44,6 +44,7 @@ create table if not exists public.expenses (
   expense_date date not null,
   payment_method text,
   document_id text references public.documents(id) on delete set null,
+  customer_id text references public.customers(id) on delete set null,
   is_recurring boolean not null default false,
   recurring_interval text check (recurring_interval in ('monthly', 'yearly')),
   recurring_start_date date,
@@ -59,6 +60,7 @@ alter table public.expenses add column if not exists is_recurring boolean not nu
 alter table public.expenses add column if not exists recurring_interval text;
 alter table public.expenses add column if not exists recurring_start_date date;
 alter table public.expenses add column if not exists recurring_end_date date;
+alter table public.expenses add column if not exists customer_id text references public.customers(id) on delete set null;
 
 create table if not exists public.company_profiles (
   id text primary key,
@@ -272,6 +274,7 @@ drop function if exists public.is_app_member();
 
 create index if not exists invoices_user_issue_date_idx on public.invoices (user_id, issue_date desc);
 create index if not exists expenses_user_expense_date_idx on public.expenses (user_id, expense_date desc);
+create index if not exists expenses_customer_id_idx on public.expenses (customer_id);
 create index if not exists documents_user_document_date_idx on public.documents (user_id, document_date desc);
 create index if not exists customers_user_company_name_idx on public.customers (user_id, company_name);
 create index if not exists prospects_user_updated_at_idx on public.prospects (user_id, updated_at desc);

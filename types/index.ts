@@ -61,6 +61,7 @@ export interface Expense {
     recurringInterval?: RecurringInterval;
     recurringStartDate?: string;
     recurringEndDate?: string;
+    customerId?: string;
     createdAt: string;
     updatedAt: string;
   }
