@@ -25,12 +25,12 @@ export function formatCurrency(value: number, currency = "CHF") {
 export function recurringExpenseMonthlyAmount(expense: { isRecurring: boolean; amount: number; expenseDate: string; recurringInterval?: "monthly" | "yearly"; recurringStartDate?: string; recurringEndDate?: string }, monthKey: string) {
   if (!expense.isRecurring) return 0;
   const selectedMonth = monthKey.slice(0, 7);
-  const startMonth = (expense.recurringStartDate ?? expense.expenseDate).slice(0, 7);
+  const startMonth = expense.recurringStartDate?.slice(0, 7);
   const endMonth = expense.recurringEndDate?.slice(0, 7);
-  if (selectedMonth < startMonth || (endMonth && selectedMonth > endMonth)) return 0;
+  if ((startMonth && selectedMonth < startMonth) || (endMonth && selectedMonth > endMonth)) return 0;
   const month = Number(selectedMonth.slice(5, 7));
   if (expense.recurringInterval === "yearly") {
-    const anniversaryMonth = Number(startMonth.slice(5, 7));
+    const anniversaryMonth = Number((startMonth ?? expense.expenseDate.slice(0, 7)).slice(5, 7));
     return anniversaryMonth === month ? expense.amount : 0;
   }
   return expense.amount;
