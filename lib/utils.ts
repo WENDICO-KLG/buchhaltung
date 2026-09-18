@@ -22,12 +22,16 @@ export function formatCurrency(value: number, currency = "CHF") {
   return new Intl.NumberFormat("de-CH", { style: "currency", currency }).format(value);
 }
 
-export function recurringExpenseMonthlyAmount(expense: { isRecurring: boolean; amount: number; recurringInterval?: "monthly" | "yearly"; recurringStartDate?: string; recurringEndDate?: string }, monthKey: string) {
+export function recurringExpenseMonthlyAmount(expense: { isRecurring: boolean; amount: number; expenseDate: string; recurringInterval?: "monthly" | "yearly"; recurringStartDate?: string; recurringEndDate?: string }, monthKey: string) {
   if (!expense.isRecurring) return 0;
   const monthStart = `${monthKey}-01`;
   const [year, month] = monthKey.split("-").map(Number);
   const monthEnd = `${monthKey}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
   if (expense.recurringStartDate && expense.recurringStartDate > monthEnd) return 0;
   if (expense.recurringEndDate && expense.recurringEndDate < monthStart) return 0;
-  return expense.recurringInterval === "yearly" ? expense.amount / 12 : expense.amount;
+  if (expense.recurringInterval === "yearly") {
+    const anniversaryMonth = Number((expense.recurringStartDate ?? expense.expenseDate).slice(5, 7));
+    return anniversaryMonth === month ? expense.amount : 0;
+  }
+  return expense.amount;
 }
