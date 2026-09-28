@@ -36,8 +36,10 @@ export function AgentChat() {
       const token = data.session?.access_token;
       if (!token) throw new Error("Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.");
       const response = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ message }) });
-      const result = (await response.json()) as { answer?: string; error?: string };
-      if (!response.ok) throw new Error(result.error || "Der Agent konnte nicht antworten.");
+      const responseText = await response.text();
+      let result: { answer?: string; error?: string } = {};
+      try { result = JSON.parse(responseText) as { answer?: string; error?: string }; } catch { result = {}; }
+      if (!response.ok) throw new Error(result.error || `Der Agent konnte nicht antworten (HTTP ${response.status}).`);
       setMessages((current) => [...current, { role: "agent", content: result.answer || "Keine Antwort erhalten." }]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Der Agent konnte nicht antworten.");

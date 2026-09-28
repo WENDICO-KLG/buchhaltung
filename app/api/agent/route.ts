@@ -97,7 +97,11 @@ export async function POST(request: Request) {
           generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
         }),
       });
-      if (!gemini.ok) throw new Error("Gemini konnte nicht antworten. Prüfe den API-Key und das API-Kontingent in Netlify.");
+      if (!gemini.ok) {
+        const providerError = await gemini.text();
+        console.error("Gemini request failed", gemini.status, providerError.slice(0, 500));
+        throw new Error(`Gemini konnte nicht antworten (HTTP ${gemini.status}). Prüfe API-Key, Modell und API-Kontingent in Netlify.`);
+      }
       const result = (await gemini.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
       answer = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
     } else {
@@ -114,6 +118,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ answer: answer || "Ich konnte dazu keine Auswertung erstellen." });
   } catch (error) {
+    console.error("Agent request failed", error);
     const message = error instanceof Error ? error.message : "Der Agent konnte nicht antworten.";
     return NextResponse.json({ error: message }, { status: message.includes("Authentifizierung") || message.includes("angemeldet") ? 401 : 500 });
   }
