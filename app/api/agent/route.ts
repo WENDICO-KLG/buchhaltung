@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     const groqKey = runtimeEnv[["GROQ", "API", "KEY"].join("_")];
     let answer: string | undefined;
 
-    if (geminiKey) {
+    if (geminiKey && !groqKey) {
       const requestBody = JSON.stringify({
         systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -139,6 +139,25 @@ export async function POST(request: Request) {
       }
       const result = (await gemini.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
       answer = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+    } else if (groqKey) {
+      const groq = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({
+          model: runtimeEnv[["GROQ", "MODEL"].join("_")] ?? "llama-3.3-70b-versatile",
+          temperature: 0.2,
+          max_tokens: 1200,
+          messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }],
+        }),
+      });
+      if (!groq.ok) {
+        const providerError = await groq.text();
+        console.error("Groq request failed", groq.status, providerError.slice(0, 500));
+        throw new Error(`Der alternative KI-Anbieter konnte nicht antworten (HTTP ${groq.status}). Prüfe den Groq-Key und das Modell in Netlify.`);
+      }
+      const result = (await groq.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      answer = result.choices?.[0]?.message?.content?.trim();
     } else {
       const ollama = await fetch(`${ollamaUrl.replace(/\/$/, "")}/api/chat`, {
         method: "POST",
