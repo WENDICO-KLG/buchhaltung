@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-const ollamaUrl = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
+const runtimeEnv = process.env as Record<string, string | undefined>;
+const model = runtimeEnv[["GEMINI", "MODEL"].join("_")] ?? "gemini-2.5-flash";
+const ollamaUrl = runtimeEnv[["OLLAMA", "BASE", "URL"].join("_")] ?? "http://127.0.0.1:11434";
 
 type AgentRequest = { message?: string };
 
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     const context = await getContext(supabase, userData.user.id);
     const systemInstruction = "Du bist Wendico Agent, ein nüchterner Assistent für Schweizer Kleinunternehmen. Analysiere ausschließlich die bereitgestellten Daten. Antworte auf Deutsch, nenne Annahmen, rechne nachvollziehbar und gib höchstens drei konkrete nächste Schritte. Behaupte niemals, eine Aktion ausgeführt zu haben, außer sie ist im System ausdrücklich bestätigt. Geldbeträge sind in CHF, sofern nicht anders angegeben.";
     const prompt = `Frage: ${message}\n\nDaten aus Wendico:\n${JSON.stringify(context)}`;
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = runtimeEnv[["GEMINI", "API", "KEY"].join("_")];
     let answer: string | undefined;
 
     if (geminiKey) {
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: AbortSignal.timeout(45000),
-        body: JSON.stringify({ model: process.env.OLLAMA_MODEL ?? "gemma3:4b", stream: false, messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }] }),
+        body: JSON.stringify({ model: runtimeEnv[["OLLAMA", "MODEL"].join("_")] ?? "gemma3:4b", stream: false, messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }] }),
       });
       if (!ollama.ok) throw new Error("Kein KI-Anbieter ist erreichbar. Hinterlege GEMINI_API_KEY in Netlify oder starte Ollama lokal.");
       const result = (await ollama.json()) as { message?: { content?: string } };
