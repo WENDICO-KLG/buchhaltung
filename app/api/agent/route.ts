@@ -112,7 +112,7 @@ export async function POST(request: Request) {
         signal: AbortSignal.timeout(45000),
         body: JSON.stringify({ model: runtimeEnv[["OLLAMA", "MODEL"].join("_")] ?? "gemma3:4b", stream: false, messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }] }),
       });
-      if (!ollama.ok) throw new Error("Kein KI-Anbieter ist erreichbar. Hinterlege GEMINI_API_KEY in Netlify oder starte Ollama lokal.");
+      if (!ollama.ok) throw new Error("Kein KI-Anbieter ist erreichbar. Hinterlege den KI-Zugang in Netlify oder starte Ollama lokal.");
       const result = (await ollama.json()) as { message?: { content?: string } };
       answer = result.message?.content?.trim();
     }
