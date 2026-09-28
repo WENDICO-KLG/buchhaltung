@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-const model = process.env.OLLAMA_MODEL ?? "gemma3:4b";
+const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 const ollamaUrl = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
 
 type AgentRequest = { message?: string };
@@ -81,22 +81,38 @@ export async function POST(request: Request) {
     }
 
     const context = await getContext(supabase, userData.user.id);
-    const ollama = await fetch(`${ollamaUrl.replace(/\/$/, "")}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(45000),
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [
-          { role: "system", content: "Du bist Wendico Agent, ein nüchterner Assistent für Schweizer Kleinunternehmen. Analysiere ausschließlich die bereitgestellten Daten. Antworte auf Deutsch, nenne Annahmen, rechne nachvollziehbar und gib höchstens drei konkrete nächste Schritte. Behaupte niemals, eine Aktion ausgeführt zu haben, außer sie ist im System ausdrücklich bestätigt. Geldbeträge sind in CHF, sofern nicht anders angegeben." },
-          { role: "user", content: `Frage: ${message}\n\nDaten aus Wendico:\n${JSON.stringify(context)}` },
-        ],
-      }),
-    });
-    if (!ollama.ok) throw new Error("Ollama ist nicht erreichbar. Starte Ollama und prüfe, ob das Modell installiert ist.");
-    const result = (await ollama.json()) as { message?: { content?: string } };
-    return NextResponse.json({ answer: result.message?.content?.trim() || "Ich konnte dazu keine Auswertung erstellen." });
+    const systemInstruction = "Du bist Wendico Agent, ein nüchterner Assistent für Schweizer Kleinunternehmen. Analysiere ausschließlich die bereitgestellten Daten. Antworte auf Deutsch, nenne Annahmen, rechne nachvollziehbar und gib höchstens drei konkrete nächste Schritte. Behaupte niemals, eine Aktion ausgeführt zu haben, außer sie ist im System ausdrücklich bestätigt. Geldbeträge sind in CHF, sofern nicht anders angegeben.";
+    const prompt = `Frage: ${message}\n\nDaten aus Wendico:\n${JSON.stringify(context)}`;
+    const geminiKey = process.env.GEMINI_API_KEY;
+    let answer: string | undefined;
+
+    if (geminiKey) {
+      const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+        signal: AbortSignal.timeout(45000),
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
+        }),
+      });
+      if (!gemini.ok) throw new Error("Gemini konnte nicht antworten. Prüfe den API-Key und das API-Kontingent in Netlify.");
+      const result = (await gemini.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+      answer = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+    } else {
+      const ollama = await fetch(`${ollamaUrl.replace(/\/$/, "")}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(45000),
+        body: JSON.stringify({ model: process.env.OLLAMA_MODEL ?? "gemma3:4b", stream: false, messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }] }),
+      });
+      if (!ollama.ok) throw new Error("Kein KI-Anbieter ist erreichbar. Hinterlege GEMINI_API_KEY in Netlify oder starte Ollama lokal.");
+      const result = (await ollama.json()) as { message?: { content?: string } };
+      answer = result.message?.content?.trim();
+    }
+
+    return NextResponse.json({ answer: answer || "Ich konnte dazu keine Auswertung erstellen." });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Der Agent konnte nicht antworten.";
     return NextResponse.json({ error: message }, { status: message.includes("Authentifizierung") || message.includes("angemeldet") ? 401 : 500 });
