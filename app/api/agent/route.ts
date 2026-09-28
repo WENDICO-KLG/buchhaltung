@@ -101,7 +101,14 @@ export async function POST(request: Request) {
       if (!gemini.ok) {
         const providerError = await gemini.text();
         console.error("Gemini request failed", gemini.status, providerError.slice(0, 500));
-        throw new Error(`Gemini konnte nicht antworten (HTTP ${gemini.status}). Prüfe API-Key, Modell und API-Kontingent in Netlify.`);
+        let detail = "";
+        try {
+          const parsed = JSON.parse(providerError) as { error?: { message?: string } };
+          detail = parsed.error?.message ? ` ${parsed.error.message.slice(0, 240)}` : "";
+        } catch {
+          detail = "";
+        }
+        throw new Error(`Gemini konnte nicht antworten (HTTP ${gemini.status}).${detail}`);
       }
       const result = (await gemini.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
       answer = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
