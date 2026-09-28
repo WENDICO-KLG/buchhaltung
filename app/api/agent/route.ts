@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     const systemInstruction = "Du bist Wendico Agent, ein nüchterner Assistent für Schweizer Kleinunternehmen. Analysiere ausschließlich die bereitgestellten Daten. Antworte auf Deutsch, nenne Annahmen, rechne nachvollziehbar und gib höchstens drei konkrete nächste Schritte. Behaupte niemals, eine Aktion ausgeführt zu haben, außer sie ist im System ausdrücklich bestätigt. Geldbeträge sind in CHF, sofern nicht anders angegeben.";
     const prompt = `Frage: ${message}\n\nDaten aus Wendico:\n${JSON.stringify(context)}`;
     const geminiKey = runtimeEnv[["GEMINI", "API", "KEY"].join("_")];
+    const groqKey = runtimeEnv[["GROQ", "API", "KEY"].join("_")];
     let answer: string | undefined;
 
     if (geminiKey) {
@@ -107,6 +108,26 @@ export async function POST(request: Request) {
       if (!gemini.ok) {
         const providerError = await gemini.text();
         console.error("Gemini request failed", gemini.status, providerError.slice(0, 500));
+        if ([429, 500, 502, 503, 504].includes(gemini.status) && groqKey) {
+          const groq = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+            signal: AbortSignal.timeout(30000),
+            body: JSON.stringify({
+              model: runtimeEnv[["GROQ", "MODEL"].join("_")] ?? "llama-3.3-70b-versatile",
+              temperature: 0.2,
+              max_tokens: 1200,
+              messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }],
+            }),
+          });
+          if (groq.ok) {
+            const result = (await groq.json()) as { choices?: Array<{ message?: { content?: string } }> };
+            answer = result.choices?.[0]?.message?.content?.trim();
+          } else {
+            console.error("Groq fallback failed", groq.status, (await groq.text()).slice(0, 500));
+          }
+        }
+        if (answer) return NextResponse.json({ answer });
         let detail = "";
         try {
           const parsed = JSON.parse(providerError) as { error?: { message?: string } };
