@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 const runtimeEnv = process.env as Record<string, string | undefined>;
-const model = runtimeEnv[["GEMINI", "MODEL"].join("_")] ?? "gemini-2.5-flash";
+const model = runtimeEnv[["GEMINI", "MODEL"].join("_")] ?? "gemini-3.8-flash";
 const ollamaUrl = runtimeEnv[["OLLAMA", "BASE", "URL"].join("_")] ?? "http://127.0.0.1:11434";
 
 type AgentRequest = { message?: string };
