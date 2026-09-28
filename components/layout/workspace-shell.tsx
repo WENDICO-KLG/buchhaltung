@@ -4,13 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ContactRound, FileArchive, FileText, LayoutDashboard, ListTodo, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
+import { Bot, Building2, ContactRound, FileArchive, FileText, LayoutDashboard, ListTodo, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { NotificationCenter } from "@/components/layout/notification-center";
 
 const navigation = [
   { label: "Übersicht", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Agent", href: "/agent", icon: Bot },
   { label: "To-Dos", href: "/todos", icon: ListTodo },
   { label: "Rechnungen", href: "/applications", icon: FileText },
   { label: "Ausgaben", href: "/analytics", icon: ReceiptText },

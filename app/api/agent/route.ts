@@ -1,0 +1,104 @@
+import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
+
+const model = process.env.OLLAMA_MODEL ?? "gemma3:4b";
+const ollamaUrl = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
+
+type AgentRequest = { message?: string };
+
+function getSupabase(request: Request) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const authorization = request.headers.get("authorization");
+  if (!url || !key || !authorization?.startsWith("Bearer ")) throw new Error("Authentifizierung fehlt.");
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: authorization } },
+  });
+}
+
+function invoiceTotal(items: unknown) {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((total, item) => {
+    if (!item || typeof item !== "object") return total;
+    const value = item as { quantity?: number; unitPrice?: number };
+    return total + Number(value.quantity ?? 0) * Number(value.unitPrice ?? 0);
+  }, 0);
+}
+
+function findTodoTitle(message: string) {
+  const match = message.match(/(?:erstelle|lege|füge)\s+(?:mir\s+)?(?:eine?\s+)?aufgabe(?:\s+an)?\s*[:\-]?\s*(.+)$/i);
+  return match?.[1]?.trim().slice(0, 200) || null;
+}
+
+async function getContext(supabase: ReturnType<typeof getSupabase>, userId: string) {
+  const [invoices, expenses, customers, prospects, todos, goals] = await Promise.all([
+    supabase.from("invoices").select("customer_name,status,issue_date,due_date,paid_at,currency,items").eq("user_id", userId).limit(200),
+    supabase.from("expenses").select("vendor,description,category,amount,currency,expense_date,is_recurring").eq("user_id", userId).limit(200),
+    supabase.from("customers").select("company_name,monthly_revenue,one_time_revenue").eq("user_id", userId).limit(200),
+    supabase.from("prospects").select("company_name,status,estimated_value,next_task,next_task_at").eq("user_id", userId).limit(200),
+    supabase.from("todos").select("title,status,due_date").eq("user_id", userId).limit(200),
+    supabase.from("monthly_goals").select("month,revenue_target,expense_budget").eq("user_id", userId).order("month", { ascending: false }).limit(12),
+  ]);
+  const result = [invoices, expenses, customers, prospects, todos, goals].find((query) => query.error);
+  if (result?.error) throw new Error("Daten konnten nicht geladen werden.");
+  const invoiceRows = invoices.data ?? [];
+  const expenseRows = expenses.data ?? [];
+  return {
+    heute: new Date().toISOString().slice(0, 10),
+    zusammenfassung: {
+      rechnungen: invoiceRows.length,
+      bezahlterUmsatz: invoiceRows.filter((row) => row.status === "paid").reduce((sum, row) => sum + invoiceTotal(row.items), 0),
+      offeneForderungen: invoiceRows.filter((row) => ["sent", "overdue"].includes(row.status)).reduce((sum, row) => sum + invoiceTotal(row.items), 0),
+      ueberfaelligeRechnungen: invoiceRows.filter((row) => row.status === "overdue").length,
+      ausgaben: expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
+    },
+    rechnungen: invoiceRows,
+    ausgaben: expenseRows,
+    kunden: customers.data ?? [],
+    prospects: prospects.data ?? [],
+    offeneAufgaben: (todos.data ?? []).filter((row) => row.status !== "done"),
+    monatsziele: goals.data ?? [],
+  };
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as AgentRequest;
+    const message = body.message?.trim();
+    if (!message || message.length > 4000) return NextResponse.json({ error: "Bitte gib eine Frage mit maximal 4000 Zeichen ein." }, { status: 400 });
+    const supabase = getSupabase(request);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) return NextResponse.json({ error: "Du musst angemeldet sein." }, { status: 401 });
+
+    const todoTitle = findTodoTitle(message);
+    if (todoTitle) {
+      const id = `todo-${crypto.randomUUID()}`;
+      const today = new Date().toISOString().slice(0, 10);
+      const { error } = await supabase.from("todos").insert({ id, user_id: userData.user.id, title: todoTitle, status: "not_started", created_at: today, updated_at: today });
+      if (error) throw new Error("Die Aufgabe konnte nicht angelegt werden.");
+      return NextResponse.json({ answer: `Aufgabe angelegt: **${todoTitle}**`, action: { type: "todo_created", title: todoTitle } });
+    }
+
+    const context = await getContext(supabase, userData.user.id);
+    const ollama = await fetch(`${ollamaUrl.replace(/\/$/, "")}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(45000),
+      body: JSON.stringify({
+        model,
+        stream: false,
+        messages: [
+          { role: "system", content: "Du bist Wendico Agent, ein nüchterner Assistent für Schweizer Kleinunternehmen. Analysiere ausschließlich die bereitgestellten Daten. Antworte auf Deutsch, nenne Annahmen, rechne nachvollziehbar und gib höchstens drei konkrete nächste Schritte. Behaupte niemals, eine Aktion ausgeführt zu haben, außer sie ist im System ausdrücklich bestätigt. Geldbeträge sind in CHF, sofern nicht anders angegeben." },
+          { role: "user", content: `Frage: ${message}\n\nDaten aus Wendico:\n${JSON.stringify(context)}` },
+        ],
+      }),
+    });
+    if (!ollama.ok) throw new Error("Ollama ist nicht erreichbar. Starte Ollama und prüfe, ob das Modell installiert ist.");
+    const result = (await ollama.json()) as { message?: { content?: string } };
+    return NextResponse.json({ answer: result.message?.content?.trim() || "Ich konnte dazu keine Auswertung erstellen." });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Der Agent konnte nicht antworten.";
+    return NextResponse.json({ error: message }, { status: message.includes("Authentifizierung") || message.includes("angemeldet") ? 401 : 500 });
+  }
+}
