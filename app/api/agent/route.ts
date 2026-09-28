@@ -88,16 +88,22 @@ export async function POST(request: Request) {
     let answer: string | undefined;
 
     if (geminiKey) {
-      const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
-        signal: AbortSignal.timeout(45000),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
-        }),
+      const requestBody = JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
       });
+      let gemini = new Response(null, { status: 500 });
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+          signal: AbortSignal.timeout(45000),
+          body: requestBody,
+        });
+        if (![429, 500, 502, 503, 504].includes(gemini.status) || attempt === 2) break;
+        await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+      }
       if (!gemini.ok) {
         const providerError = await gemini.text();
         console.error("Gemini request failed", gemini.status, providerError.slice(0, 500));
