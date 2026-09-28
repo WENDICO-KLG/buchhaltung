@@ -4,14 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Building2, ContactRound, FileArchive, FileText, LayoutDashboard, ListTodo, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
+import { Building2, ContactRound, FileArchive, FileText, LayoutDashboard, ListTodo, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { NotificationCenter } from "@/components/layout/notification-center";
 
 const navigation = [
   { label: "Übersicht", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Agent", href: "/agent", icon: Bot },
   { label: "To-Dos", href: "/todos", icon: ListTodo },
   { label: "Rechnungen", href: "/applications", icon: FileText },
   { label: "Ausgaben", href: "/analytics", icon: ReceiptText },
@@ -63,5 +62,6 @@ export function WorkspaceShell({ children, active, title = "Wendico" }: { childr
     </aside>
     {mobileOpen && <div className="fixed inset-0 z-40 bg-[#020713]/75 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}><nav className="h-full w-[270px] border-r border-white/10 bg-[#071326] p-6" onClick={(event) => event.stopPropagation()}><div className="flex items-center gap-3"><span className="flex h-12 w-[76px] items-center"><Image src="/wendico-logo-v2.png" alt="Wendico" width={75} height={48} className="h-auto w-full object-contain" /></span><span className="font-semibold text-white">Wendico</span></div><div className="mt-8 space-y-2">{links}</div></nav></div>}
     <main className="min-h-screen md:pl-[84px]"><header className="app-header sticky top-0 z-20 flex h-16 items-center justify-between px-5 md:px-8"><div className="flex min-w-0 items-center gap-3"><button className="header-icon-button md:hidden" onClick={() => setMobileOpen(true)} aria-label="Menü öffnen"><Menu size={21} /></button><span className="truncate text-sm font-semibold text-[var(--ink)]">{title}</span></div><div className="flex items-center gap-2"><NotificationCenter/><button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Darstellung wechseln" className="header-icon-button"><Sun size={17} /></button><span className="user-avatar">{initials}</span></div></header><div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">{children}</div></main>
+    <Link href="/agent" aria-label="AI-Agent öffnen" title="AI-Agent öffnen" className="agent-launcher"><Image src="/ai-helper.png" alt="" width={88} height={88} className="h-16 w-16 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"/><span>AI</span></Link>
   </div>;
 }
