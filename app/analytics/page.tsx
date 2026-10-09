@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarRange, Pencil, Plus, ReceiptText, Repeat, Trash2, Users } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { createExpense, deleteExpense, getCustomers, getExpenses, updateExpense } from "@/lib/storage";
-import { formatCurrency, recurringExpenseMonthlyAmount } from "@/lib/utils";
+import { formatCurrency, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
 import type { Customer, Expense, RecurringInterval } from "@/types";
 
 type FilterMode = "month" | "range" | "customer";
-const today = new Date().toISOString().slice(0, 10);
+const today = todayKey();
 const emptyForm = { vendor: "", description: "", amount: "", expenseDate: today, customerId: "", isRecurring: false, recurringInterval: "monthly" as RecurringInterval, recurringStartDate: "", recurringEndDate: "" };
 
 export default function ExpensesPage() {
@@ -38,14 +38,7 @@ export default function ExpensesPage() {
     const from = filterFrom <= filterTo ? filterFrom : filterTo;
     const to = filterFrom <= filterTo ? filterTo : filterFrom;
     if (!expense.isRecurring) return expense.expenseDate >= from && expense.expenseDate <= to;
-    const start = new Date(`${from}T12:00:00`);
-    const end = new Date(`${to}T12:00:00`);
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    while (cursor <= end) {
-      if (recurringExpenseMonthlyAmount(expense, cursor.toISOString().slice(0, 7)) > 0) return true;
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-    return false;
+    return monthKeysBetween(from, to).some((key) => recurringExpenseMonthlyAmount(expense, key) > 0);
   }), [expenses, filterCustomer, filterFrom, filterMode, filterMonth, filterTo]);
   const total = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
   const recurringMonth = filterMode === "month" ? filterMonth : today.slice(0, 7);

@@ -102,6 +102,8 @@ export interface CompanyProfile {
     address?: string;
     project?: string;
     monthlyRevenue: number;
+    monthlyStartDate?: string;
+    monthlyEndDate?: string;
     oneTimeRevenue: number;
     notes?: string;
     logoUrl?: string;

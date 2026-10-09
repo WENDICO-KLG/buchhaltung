@@ -90,6 +90,8 @@ create table if not exists public.customers (
   address text,
   project text,
   monthly_revenue numeric(12,2) not null default 0 check (monthly_revenue >= 0),
+  monthly_start_date date,
+  monthly_end_date date,
   one_time_revenue numeric(12,2) not null default 0 check (one_time_revenue >= 0),
   notes text,
   logo_path text,
@@ -100,6 +102,8 @@ create table if not exists public.customers (
 alter table public.customers add column if not exists monthly_revenue numeric(12,2) not null default 0;
 alter table public.customers add column if not exists one_time_revenue numeric(12,2) not null default 0;
 alter table public.customers add column if not exists logo_path text;
+alter table public.customers add column if not exists monthly_start_date date;
+alter table public.customers add column if not exists monthly_end_date date;
 
 create table if not exists public.prospects (
   id text primary key,

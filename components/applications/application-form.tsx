@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createInvoice, updateInvoice } from "@/lib/storage";
-import { formatCurrency, invoiceStatusLabels, invoiceTotal } from "@/lib/utils";
+import { formatCurrency, invoiceStatusLabels, invoiceTotal, toDateKey, todayKey } from "@/lib/utils";
 import type { Invoice, InvoiceItem, InvoiceStatus } from "@/types";
 
-const today = new Date().toISOString().slice(0, 10);
-const due = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+const today = todayKey();
+const due = toDateKey(new Date(Date.now() + 14 * 86400000));
 const blankItem = (): InvoiceItem => ({ id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, vatRate: 0 });
 
 export function ApplicationForm({ application }: { application?: Invoice }) {
