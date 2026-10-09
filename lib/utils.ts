@@ -18,30 +18,41 @@ export function invoiceTotal(items: { quantity: number; unitPrice: number; vatRa
   return cents / 100;
 }
 
+export function invoiceNet(items: { quantity: number; unitPrice: number }[]) {
+  const cents = items.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100), 0);
+  return cents / 100;
+}
+
 export function formatCurrency(value: number, currency = "CHF") {
   return new Intl.NumberFormat("de-CH", { style: "currency", currency }).format(value);
 }
 
-export function recurringExpenseMonthlyAmount(expense: { isRecurring: boolean; amount: number; expenseDate: string; recurringInterval?: "monthly" | "yearly"; recurringStartDate?: string; recurringEndDate?: string }, monthKey: string) {
-  if (!expense.isRecurring) return 0;
-  const selectedMonth = monthKey.slice(0, 7);
-  const startMonth = expense.recurringStartDate?.slice(0, 7);
-  const endMonth = expense.recurringEndDate?.slice(0, 7);
-  if ((startMonth && selectedMonth < startMonth) || (endMonth && selectedMonth > endMonth)) return 0;
-  const month = Number(selectedMonth.slice(5, 7));
-  if (expense.recurringInterval === "yearly") {
-    const anniversaryMonth = Number((startMonth ?? expense.expenseDate.slice(0, 7)).slice(5, 7));
-    return anniversaryMonth === month ? expense.amount : 0;
-  }
-  return expense.amount;
+// Yearly amounts fall into the month of the start date each year.
+export function recurringAmountForMonth(amount: number, interval: "monthly" | "yearly" | undefined, startDate: string | undefined, endDate: string | undefined, monthKey: string) {
+  const month = monthKey.slice(0, 7);
+  const startMonth = startDate?.slice(0, 7);
+  const endMonth = endDate?.slice(0, 7);
+  if ((startMonth && month < startMonth) || (endMonth && month > endMonth)) return 0;
+  if (interval === "yearly") return startMonth && startMonth.slice(5, 7) === month.slice(5, 7) ? amount : 0;
+  return amount;
 }
 
-export function customerMonthlyRevenue(customer: { monthlyRevenue: number; monthlyStartDate?: string; monthlyEndDate?: string }, monthKey: string) {
-  const month = monthKey.slice(0, 7);
-  const startMonth = customer.monthlyStartDate?.slice(0, 7);
-  const endMonth = customer.monthlyEndDate?.slice(0, 7);
-  if ((startMonth && month < startMonth) || (endMonth && month > endMonth)) return 0;
-  return customer.monthlyRevenue;
+export function isRecurringActive(startDate: string | undefined, endDate: string | undefined, monthKey: string) {
+  return !(startDate && monthKey < startDate.slice(0, 7)) && !(endDate && monthKey > endDate.slice(0, 7));
+}
+
+export function recurringExpenseMonthlyAmount(expense: { isRecurring: boolean; amount: number; expenseDate: string; recurringInterval?: "monthly" | "yearly"; recurringStartDate?: string; recurringEndDate?: string }, monthKey: string) {
+  if (!expense.isRecurring) return 0;
+  return recurringAmountForMonth(expense.amount, expense.recurringInterval, expense.recurringStartDate || expense.expenseDate, expense.recurringEndDate, monthKey);
+}
+
+export function customerRecurringRevenue(customer: { recurringRevenue: number; billingInterval: "monthly" | "yearly"; billingStartDate?: string; billingEndDate?: string; createdAt: string }, monthKey: string) {
+  return recurringAmountForMonth(customer.recurringRevenue, customer.billingInterval, customer.billingStartDate || (customer.billingInterval === "yearly" ? customer.createdAt : undefined), customer.billingEndDate, monthKey);
+}
+
+export function customerOneTimeRevenue(customer: { oneTimeRevenue: number; oneTimeRevenueDate?: string }, from: string, to: string) {
+  const date = customer.oneTimeRevenueDate;
+  return date && date >= from && date <= to ? customer.oneTimeRevenue : 0;
 }
 
 // Local-time date keys; toISOString() shifts to UTC and yields the previous day/month in CET/CEST.

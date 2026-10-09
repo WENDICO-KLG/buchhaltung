@@ -13,10 +13,13 @@ create table if not exists public.invoices (
   items jsonb not null default '[]'::jsonb check (jsonb_typeof(items) = 'array'),
   notes text,
   paid_at date,
+  covers_recurring boolean not null default false,
   created_at date not null,
   updated_at date not null,
   unique (user_id, invoice_number)
 );
+
+alter table public.invoices add column if not exists covers_recurring boolean not null default false;
 
 create table if not exists public.documents (
   id text primary key,
@@ -92,6 +95,8 @@ create table if not exists public.customers (
   monthly_revenue numeric(12,2) not null default 0 check (monthly_revenue >= 0),
   monthly_start_date date,
   monthly_end_date date,
+  billing_interval text not null default 'monthly' check (billing_interval in ('monthly', 'yearly')),
+  one_time_revenue_date date,
   one_time_revenue numeric(12,2) not null default 0 check (one_time_revenue >= 0),
   notes text,
   logo_path text,
@@ -104,6 +109,8 @@ alter table public.customers add column if not exists one_time_revenue numeric(1
 alter table public.customers add column if not exists logo_path text;
 alter table public.customers add column if not exists monthly_start_date date;
 alter table public.customers add column if not exists monthly_end_date date;
+alter table public.customers add column if not exists billing_interval text not null default 'monthly';
+alter table public.customers add column if not exists one_time_revenue_date date;
 
 create table if not exists public.prospects (
   id text primary key,

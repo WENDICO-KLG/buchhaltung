@@ -6,7 +6,7 @@ import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, 
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, FilePlus2, Pencil, Target, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, saveMonthlyGoal } from "@/lib/storage";
-import { addMonths, customerMonthlyRevenue, formatCurrency, invoiceStatusLabels, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
+import { addMonths, customerOneTimeRevenue, customerRecurringRevenue, formatCurrency, invoiceNet, invoiceStatusLabels, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
 import type { Customer, Expense, Invoice, InvoiceStatus, MonthlyGoal } from "@/types";
 
 type RangeMode = "month" | "year" | "custom";
@@ -20,6 +20,8 @@ const compactCurrency = (value: number) => new Intl.NumberFormat("de-CH", { nota
 const inRange = (date: string, range: Range) => date >= range.from && date <= range.to;
 const paidDate = (invoice: Invoice) => invoice.paidAt ?? invoice.issueDate;
 const isOverdue = (invoice: Invoice) => invoice.status === "overdue" || (invoice.status === "sent" && invoice.dueDate < today);
+// Recurring-covering invoices are already counted via the customer's recurring revenue; other currencies can't be summed into CHF.
+const countsAsRevenue = (invoice: Invoice, range: Range) => invoice.status === "paid" && !invoice.coversRecurring && invoice.currency === "CHF" && inRange(paidDate(invoice), range);
 
 const statusStyles: Record<InvoiceStatus, string> = {
   draft: "bg-[var(--surface-soft)] text-[var(--muted)]",
@@ -31,15 +33,16 @@ const statusStyles: Record<InvoiceStatus, string> = {
 
 function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], customers: Customer[]) {
   const months = monthKeysBetween(range.from, range.to);
-  const invoiceRevenue = invoices.filter((invoice) => invoice.status === "paid" && inRange(paidDate(invoice), range)).reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0);
-  const recurringByMonth = months.map((key) => customers.reduce((sum, customer) => sum + customerMonthlyRevenue(customer, key), 0));
+  const invoiceRevenue = invoices.filter((invoice) => countsAsRevenue(invoice, range)).reduce((sum, invoice) => sum + invoiceNet(invoice.items), 0);
+  const oneTimeRevenue = customers.reduce((sum, customer) => sum + customerOneTimeRevenue(customer, range.from, range.to), 0);
+  const recurringByMonth = months.map((key) => customers.reduce((sum, customer) => sum + customerRecurringRevenue(customer, key), 0));
   const recurringCostsByMonth = months.map((key) => expenses.reduce((sum, expense) => sum + recurringExpenseMonthlyAmount(expense, key), 0));
   const recurringRevenue = recurringByMonth.reduce((sum, value) => sum + value, 0);
   const recurringCosts = recurringCostsByMonth.reduce((sum, value) => sum + value, 0);
   const oneTimeCosts = expenses.filter((expense) => !expense.isRecurring && inRange(expense.expenseDate, range)).reduce((sum, expense) => sum + expense.amount, 0);
   const plannedRevenue = months.reduce((sum, key, index) => key > currentMonth ? sum + recurringByMonth[index] : sum, 0);
   const plannedCosts = months.reduce((sum, key, index) => key > currentMonth ? sum + recurringCostsByMonth[index] : sum, 0);
-  const revenue = invoiceRevenue + recurringRevenue;
+  const revenue = invoiceRevenue + oneTimeRevenue + recurringRevenue;
   const costs = oneTimeCosts + recurringCosts;
   return { revenue, costs, profit: revenue - costs, recurringRevenue, recurringCosts, plannedRevenue, plannedCosts };
 }
@@ -106,8 +109,10 @@ export default function Dashboard() {
   const receivables = useMemo(() => {
     const open = invoices.filter(({ status }) => status === "sent" || status === "overdue");
     const overdue = open.filter(isOverdue);
-    return { openCount: open.length, openAmount: open.reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0), overdueCount: overdue.length, overdueAmount: overdue.reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0) };
+    return { openCount: open.length, openAmount: open.filter((invoice) => invoice.currency === "CHF").reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0), overdueCount: overdue.length, overdueAmount: overdue.filter((invoice) => invoice.currency === "CHF").reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0) };
   }, [invoices]);
+
+  const foreignCurrencyCount = useMemo(() => invoices.filter((invoice) => invoice.status === "paid" && invoice.currency !== "CHF" && inRange(paidDate(invoice), range)).length, [invoices, range]);
 
   const chartData = useMemo(() => {
     const keys = rangeMode === "month" ? Array.from({ length: 6 }, (_, index) => addMonths(rangeMonth, index - 5)) : monthKeysBetween(range.from, range.to);
@@ -122,11 +127,11 @@ export default function Dashboard() {
     const totals = new Map<string, number>();
     const months = monthKeysBetween(range.from, range.to);
     for (const customer of customers) {
-      const value = months.reduce((sum, key) => sum + customerMonthlyRevenue(customer, key), 0);
+      const value = months.reduce((sum, key) => sum + customerRecurringRevenue(customer, key), 0) + customerOneTimeRevenue(customer, range.from, range.to);
       if (value > 0) totals.set(customer.companyName, (totals.get(customer.companyName) ?? 0) + value);
     }
     for (const invoice of invoices) {
-      if (invoice.status === "paid" && inRange(paidDate(invoice), range)) totals.set(invoice.customerName, (totals.get(invoice.customerName) ?? 0) + invoiceTotal(invoice.items));
+      if (countsAsRevenue(invoice, range)) totals.set(invoice.customerName, (totals.get(invoice.customerName) ?? 0) + invoiceNet(invoice.items));
     }
     return [...totals].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
   }, [range, customers, invoices]);
@@ -199,8 +204,10 @@ export default function Dashboard() {
       <ChevronRight size={16}/>
     </Link>}
 
+    {foreignCurrencyCount > 0 && <p className="mt-3 text-xs text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
+
     <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Kpi label="Umsatz" value={metrics.revenue} previous={previous?.revenue} comparisonLabel={comparisonLabel} loading={loading}
+      <Kpi label="Umsatz (netto)" value={metrics.revenue} previous={previous?.revenue} comparisonLabel={comparisonLabel} loading={loading}
         hint={metrics.plannedRevenue > 0 ? `inkl. ${formatCurrency(metrics.plannedRevenue)} erwartet` : `davon ${formatCurrency(metrics.recurringRevenue)} wiederkehrend`}/>
       <Kpi label="Ausgaben" value={metrics.costs} previous={previous?.costs} comparisonLabel={comparisonLabel} loading={loading} inverse
         hint={metrics.plannedCosts > 0 ? `inkl. ${formatCurrency(metrics.plannedCosts)} geplant` : `davon ${formatCurrency(metrics.recurringCosts)} wiederkehrend`}/>

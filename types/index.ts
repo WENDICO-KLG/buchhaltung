@@ -44,6 +44,7 @@ export interface Invoice {
     items: InvoiceItem[];
     notes?: string;
     paidAt?: string;
+    coversRecurring?: boolean;
     createdAt: string;
     updatedAt: string;
   }
@@ -101,10 +102,12 @@ export interface CompanyProfile {
     phone?: string;
     address?: string;
     project?: string;
-    monthlyRevenue: number;
-    monthlyStartDate?: string;
-    monthlyEndDate?: string;
+    recurringRevenue: number;
+    billingInterval: RecurringInterval;
+    billingStartDate?: string;
+    billingEndDate?: string;
     oneTimeRevenue: number;
+    oneTimeRevenueDate?: string;
     notes?: string;
     logoUrl?: string;
     createdAt: string;

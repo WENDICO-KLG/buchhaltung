@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, Check, ContactRound, MessageSquare, Pencil, Plus, Send, Trash2, Users, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { createTodo, createTodoComment, deleteTodo, getCustomers, getProspects, getTodoComments, getTodos, updateTodo } from "@/lib/storage";
+import { todayKey } from "@/lib/utils";
 import type { Customer, Prospect, Todo, TodoComment, TodoStatus } from "@/types";
 
 const statusLabels: Record<TodoStatus, string> = { not_started: "Nicht gestartet", in_progress: "In Bearbeitung", done: "Erledigt" };
@@ -117,7 +118,7 @@ function TodoRow({ todo, customers, prospects, customerName, prospectName, onSta
     onOpen();
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKey();
   const overdue = Boolean(todo.dueDate && todo.dueDate < today && todo.status !== "done");
   function cycleStatus() { const nextIndex = (statusOrder.indexOf(todo.status) + 1) % statusOrder.length; onStatusChange(statusOrder[nextIndex]); }
 
@@ -180,7 +181,7 @@ function TodoDetailModal({ todo, customerName, prospectName, onClose, onStatusCh
     try { const comment = await createTodoComment(todo.id, body.trim()); setComments((current) => [...current, comment]); setBody(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Kommentar konnte nicht gespeichert werden."); }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKey();
   const overdue = Boolean(todo.dueDate && todo.dueDate < today && todo.status !== "done");
 
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>

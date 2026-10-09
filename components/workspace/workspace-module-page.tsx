@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Download, FileUp, Mail, Pencil, Phone, Plus, Search, Trash2, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { createWorkspaceItem, deleteWorkspaceItem, getWorkspaceFiles, getWorkspaceFileUrl, getWorkspaceItems, updateWorkspaceItem, uploadWorkspaceFile } from "@/lib/storage";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, todayKey } from "@/lib/utils";
 import type { WorkspaceFile, WorkspaceItem, WorkspaceModule, WorkspacePriority } from "@/types";
 
 export type WorkspaceModuleConfig = {
@@ -47,8 +47,8 @@ export function WorkspaceModulePage({ config }: { config: WorkspaceModuleConfig 
   const filtered = useMemo(() => items
     .filter((item) => status === "all" || item.status === status)
     .filter((item) => `${item.title} ${item.subtitle ?? ""} ${item.owner ?? ""} ${item.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase())), [items, query, status]);
-  const today = new Date(); const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const due = items.filter((item) => item.dueDate && item.dueDate <= todayKey && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status)).length;
+  const todayDate = todayKey();
+  const due = items.filter((item) => item.dueDate && item.dueDate <= todayDate && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status)).length;
   const totalAmount = items.reduce((sum, item) => sum + (item.amount ?? 0), 0);
 
   const update = (key: keyof FormValue, value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -63,7 +63,7 @@ export function WorkspaceModulePage({ config }: { config: WorkspaceModuleConfig 
     try {
       if (editingId) {
         await updateWorkspaceItem(editingId, payload);
-        setItems((current) => current.map((item) => item.id === editingId ? { ...item, ...payload, updatedAt: new Date().toISOString().slice(0, 10) } : item));
+        setItems((current) => current.map((item) => item.id === editingId ? { ...item, ...payload, updatedAt: todayKey() } : item));
       } else {
         const item = await createWorkspaceItem(payload);
         setItems((current) => [item, ...current]);
