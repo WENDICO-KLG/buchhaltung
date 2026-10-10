@@ -85,6 +85,11 @@ export async function updateCustomer(id: string, changes: Partial<Customer>) {
   if (error) throw databaseError(error);
 }
 export async function deleteCustomer(id: string) { const userId = await currentCompanyId(true); const { error } = await supabase.from("customers").delete().eq("id", id).eq("user_id", userId); if (error) throw databaseError(error); }
+export async function setCustomerCommissionEnabled(id: string, enabled: boolean) {
+  const companyId = await currentCompanyId(true, true);
+  const { error } = await supabase.from("customers").update({ commission_enabled: enabled }).eq("id", id).eq("user_id", companyId);
+  if (error) throw databaseError(error);
+}
 export async function uploadCustomerLogo(customerId: string, file: File) { const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp"]); if (!allowedTypes.has(file.type)) throw new Error("Erlaubt sind PNG-, JPG- und WebP-Dateien."); if (file.size > 2 * 1024 * 1024) throw new Error("Das Logo darf maximal 2 MB groß sein."); const userId = await currentCompanyId(true); const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg"; const path = `${userId}/${customerId}.${extension}`; const { error: uploadError } = await supabase.storage.from("customer-logos").upload(path, file, { upsert: true, contentType: file.type }); if (uploadError) throw databaseError(uploadError); const { error } = await supabase.from("customers").update({ logo_path: path, updated_at: todayKey() }).eq("id", customerId).eq("user_id", userId); if (error) throw databaseError(error); return customerLogoUrl(path, userId); }
 
 

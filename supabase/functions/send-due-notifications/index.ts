@@ -24,15 +24,16 @@ Deno.serve(async (request) => {
 
   let sent = 0;
   for (const item of dueItems ?? []) {
-    if (item.href === "/workspace/projects") continue;
+    if (item.href.startsWith("/workspace/")) continue;
     const href = item.href.startsWith("/applications/") ? "/dashboard" : item.href;
-    const { data: members, error: membersError } = await supabase.from("company_members").select("user_id").eq("company_id", item.user_id);
+    const { data: members, error: membersError } = await supabase.from("company_members").select("user_id,role,allowed_pages").eq("company_id", item.user_id);
     if (membersError) throw membersError;
-    if (!members?.length) continue;
+    const recipients = (members ?? []).filter((member) => ["owner","admin"].includes(member.role) || (member.allowed_pages ?? []).includes(href.slice(1)));
+    if (!recipients.length) continue;
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from("push_subscriptions")
       .select("id, endpoint, p256dh, auth")
-      .in("user_id", members.map((member) => member.user_id));
+      .in("user_id", recipients.map((member) => member.user_id));
     if (subscriptionsError) throw subscriptionsError;
 
     for (const subscription of subscriptions ?? []) {

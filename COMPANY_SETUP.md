@@ -22,6 +22,25 @@ aushebeln. Fuer weitere Updates ausschliesslich die Migrationen verwenden.
 
 ## Bedienung
 
+Die Migration `supabase/migrations/20261011160000_commissions_and_page_access.sql`
+aktiviert den Rechner und Seitenfreigaben. Inhaber und Administratoren koennen
+unter Firma & Team die Seiten fuer Mitarbeiter/Leser einzeln freigeben.
+Einstellungen bleiben erreichbar; Inhaber/Administratoren behalten Vollzugriff.
+Die Freigabe der Uebersicht erlaubt auch die Finanzgrunddaten (Kunden/Ausgaben),
+die deren Kennzahlen benoetigen. Seitenrechte ersetzen nicht die Rollenrechte:
+Leser bleiben ohne Schreibrechte. Bestehende Mitgliedschaften behalten zunaechst
+alle aktuellen Seiten; Freigaben danach gezielt einschraenken.
+
+Auf Kundenkarten aktivieren Inhaber/Administratoren den Provisionsschalter.
+Im Rechner werden ausschliesslich aktivierte Kunden angezeigt. Dort werden
+Mitarbeiter und Prozentsatz zugeordnet; Provision gilt nur fuer einmalige Einnahmen.
+Mitarbeiter/Leser sehen nur ihnen zugeteilte Kunden. Abschalten loescht die
+Provisionszuordnung; erneutes Aktivieren startet ohne Zuordnung. Zeitraumfilter
+verwenden das einmalige Zahlungsdatum; undatierte Betraege sind nur ohne Filter
+enthalten. Berechnungen sind Vorschauen, keine Auszahlung oder Lohnabrechnung.
+Die Push-Edge-Function ebenfalls neu deployen, damit Seitenrechte beim Versand
+beruecksichtigt werden.
+
 Mit `supabase/migrations/20261011150000_company_member_names.sql` werden
 firmenbezogene Anzeigenamen aktiviert. Unter Firma & Team den Stift neben
 dem Mitglied anklicken, Namen eingeben und speichern. Ein leerer Name stellt

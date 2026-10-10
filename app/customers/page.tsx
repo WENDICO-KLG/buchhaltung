@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarRange, Mail, Pencil, Phone, Plus, ReceiptText, Repeat, Trash2, Upload, Users } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { createCustomer, deleteCustomer, getCustomers, updateCustomer, uploadCustomerLogo } from "@/lib/storage";
+import { createCustomer, deleteCustomer, getCustomers, updateCustomer, uploadCustomerLogo, setCustomerCommissionEnabled } from "@/lib/storage";
+import { getActiveCompany } from "@/lib/company";
+import { supabase } from "@/lib/supabase";
 import { customerOneTimeRevenue, customerRecurringRevenue, formatCurrency, isRecurringActive, monthKeysBetween, todayKey } from "@/lib/utils";
 import type { Customer, RecurringInterval } from "@/types";
 
@@ -27,6 +29,26 @@ export default function CustomersPage() {
   const [editingId, setEditingId] = useState<string>();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+  const [manageCommission, setManageCommission] = useState(false);
+  const [commissionStates, setCommissionStates] = useState<Record<string,boolean>>({});
+  const [commissionBusy, setCommissionBusy] = useState<string>();
+
+  useEffect(() => {
+    getActiveCompany().then(async (company) => {
+      if (!company) return;
+      setManageCommission(["owner","admin"].includes(company.role));
+      const { data, error } = await supabase.from("customers").select("id,commission_enabled").eq("user_id",company.company_id);
+      if (error) throw error;
+      setCommissionStates(Object.fromEntries((data ?? []).map((row) => [row.id,Boolean(row.commission_enabled)])));
+    }).catch(() => setError("Provisionsfreigaben konnten nicht geladen werden."));
+  }, []);
+
+  async function toggleCommission(id: string, enabled: boolean) {
+    setCommissionBusy(id); setError("");
+    try { await setCustomerCommissionEnabled(id,enabled); setCommissionStates((current) => ({ ...current,[id]:enabled })); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Provision konnte nicht gespeichert werden."); }
+    finally { setCommissionBusy(undefined); }
+  }
 
   useEffect(() => { getCustomers().then(setCustomers).catch((cause) => setError(cause instanceof Error ? cause.message : "Kunden konnten nicht geladen werden.")); }, []);
 
@@ -130,6 +152,7 @@ export default function CustomersPage() {
         </div>
         <h2 className="mt-4 text-lg font-semibold text-[var(--ink)]">{customer.companyName}</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">{customer.contactName || "Keine Kontaktperson"}</p>
+        <label className="mt-4 flex items-center justify-between gap-3 text-sm"><span>Provision</span><input type="checkbox" role="switch" aria-label={`Provision für ${customer.companyName}`} checked={commissionStates[customer.id] ?? false} disabled={!manageCommission || Boolean(commissionBusy)} onChange={(event) => void toggleCommission(customer.id,event.target.checked)} className="commission-switch"/></label>
         {customer.project && <p className="mt-4 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs text-[var(--primary)]">{customer.project}</p>}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <Revenue label={intervalLabel[customer.billingInterval]} value={customer.recurringRevenue} detail={customer.recurringRevenue > 0 ? `${periodLabel(customer)}${customer.billingInterval === "yearly" && customer.billingStartDate ? ` · jeweils im ${formatMonth(customer.billingStartDate, "long").split(" ")[0]}` : ""}` : undefined}/>

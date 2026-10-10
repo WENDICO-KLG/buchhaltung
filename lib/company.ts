@@ -1,8 +1,15 @@
 import { supabase } from "@/lib/supabase";
 
 export type CompanyRole = "owner" | "admin" | "member" | "viewer";
-export type CompanyMembership = { company_id: string; company_name: string; role: CompanyRole };
-export type CompanyMember = { user_id: string; email: string; role: CompanyRole; display_name?: string | null };
+export const companyPages = { dashboard: "Übersicht", todos: "To-Dos", analytics: "Ausgaben", cvs: "Belege", customers: "Kunden", prospects: "Prospects", profile: "Unternehmen", calculator: "Rechner" };
+export type CompanyPage = keyof typeof companyPages;
+export type CompanyMembership = { company_id: string; company_name: string; role: CompanyRole; allowed_pages?: CompanyPage[] };
+export type CompanyMember = { user_id: string; email: string; role: CompanyRole; display_name?: string | null; allowed_pages?: CompanyPage[] };
+export const canAccessPage = (company: CompanyMembership, page: string) => company.role === "owner" || company.role === "admin" || page === "settings" || (company.allowed_pages ?? []).includes(page as CompanyPage);
+export type CommissionCustomer = { customer_id: string; company_name: string; amount: number | string; payment_date?: string | null; member_id?: string | null; member_name?: string | null; rate: number | string };
+export const getCommissionCustomers = (companyId: string) => rpc<CommissionCustomer[]>("commission_customers", { company: companyId });
+export const setCustomerCommission = (companyId: string, customerId: string, memberId: string, rate: number) => rpc<null>("set_customer_commission", { company: companyId, customer: customerId, member: memberId || null, percentage: rate });
+export const setMemberPages = (companyId: string, userId: string, pages: CompanyPage[]) => rpc<null>("set_member_pages", { company: companyId, member: userId, pages });
 export const companyMemberName = (member: CompanyMember) => member.display_name?.trim() || member.email;
 export type CompanyInvitation = { id: string; company_id: string; company_name: string; email: string; role: "admin" | "member" | "viewer"; expires_at: string };
 

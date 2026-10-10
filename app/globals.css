@@ -44,6 +44,12 @@ a { color: inherit; text-decoration: none; }
 .field { width: 100%; min-height: 2.75rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--surface); padding: .625rem .875rem; color: var(--ink); font-size: .9375rem; outline: none; }
 .field:focus { border-color: #5b91c1; box-shadow: 0 0 0 3px rgba(31,95,153,.12); }
 .field::placeholder { color: #98a2b3; }
+.commission-switch { appearance: none; position: relative; flex: none; width: 2.5rem; height: 1.5rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-soft); cursor: pointer; }
+.commission-switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 1rem; height: 1rem; border-radius: 50%; background: var(--muted); transition: transform .15s ease; }
+.commission-switch:checked { background: var(--primary); }
+.commission-switch:checked::before { transform: translateX(1rem); background: var(--paper); }
+.commission-switch:disabled { opacity: .6; cursor: not-allowed; }
+.commission-switch:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .todo-page, .todo-dialog { letter-spacing: 0; }
 .todo-page .field.pl-9 { padding-left: 2.25rem; }
 .todo-page .primary, .todo-dialog .primary { color: var(--paper); }

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Building2, Check, MailPlus, Pencil, Trash2, Users, X } from "lucide-react";
-import { companyMemberName, setCompanyMemberName } from "@/lib/company";
+import { companyMemberName, companyPages, setCompanyMemberName, setMemberPages } from "@/lib/company";
+import type { CompanyPage } from "@/lib/company";
 import { supabase } from "@/lib/supabase";
 import { acceptCompanyInvitation, companyRoleLabels, createCompany, getActiveCompany, getCompanyInvitations, getCompanyMembers, getMyCompanies, getMyInvitations, inviteCompanyMember, removeCompanyMember, revokeCompanyInvitation, selectCompany, setCompanyMemberRole } from "@/lib/company";
 import type { CompanyInvitation, CompanyMember, CompanyMembership } from "@/lib/company";
@@ -81,6 +82,7 @@ export function CompanyTeam() {
               {member.display_name && <p className="mt-1 break-all text-xs text-[#8292ae]">{member.email}</p>}
             </div>
             <div className="flex items-center gap-2">{editable ? <select className="field w-40" aria-label={`Rolle von ${label}`} value={member.role} disabled={busy} onChange={(event) => act(() => setCompanyMemberRole(active.company_id, member.user_id, event.target.value as EditableRole), "Rolle aktualisiert.")}>{roles.filter((value) => value !== "admin" || active.role === "owner").map((value) => <option key={value} value={value}>{companyRoleLabels[value]}</option>)}</select> : <span className="text-sm text-[#8292ae]">{companyRoleLabels[member.role]}</span>}{editable && <button type="button" className="header-icon-button" disabled={busy} title="Mitglied entfernen" aria-label={`${label} entfernen`} onClick={() => { if (window.confirm(`${label} aus der Firma entfernen?`)) act(() => removeCompanyMember(active.company_id, member.user_id), "Mitglied entfernt."); }}><Trash2 size={16}/></button>}</div>
+            {manage && ["member","viewer"].includes(member.role) && <fieldset className="w-full"><legend className="mb-2 text-xs font-semibold text-[var(--muted)]">Seitenzugriff für {label}</legend><div className="flex flex-wrap gap-x-5 gap-y-2">{(Object.entries(companyPages) as [CompanyPage,string][]).map(([page,pageLabel]) => <label key={page} className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy} checked={(member.allowed_pages ?? []).includes(page)} onChange={(event) => { const pages = member.allowed_pages ?? []; void act(() => setMemberPages(active.company_id,member.user_id,event.target.checked ? [...pages,page] : pages.filter((value) => value !== page)), "Seitenzugriff gespeichert."); }}/>{pageLabel}</label>)}</div></fieldset>}
           </div>;
         })}</div>
         {invitations.length > 0 && <div className="mt-6"><h3 className="text-sm font-semibold text-white">Offene Einladungen</h3>{invitations.map((invite) => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 py-3"><div className="min-w-0"><p className="break-all text-sm text-white">{invite.email}</p><p className="text-xs text-[#8292ae]">{companyRoleLabels[invite.role]} · bis {new Date(invite.expires_at).toLocaleDateString("de-CH")}</p></div>{(active.role === "owner" || invite.role !== "admin") && <button type="button" className="header-icon-button" disabled={busy} title="Einladung widerrufen" aria-label={`Einladung fuer ${invite.email} widerrufen`} onClick={() => act(() => revokeCompanyInvitation(invite.id), "Einladung widerrufen.")}><X size={16}/></button>}</div>)}</div>}

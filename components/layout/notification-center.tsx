@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { Bell, BellRing, CalendarClock, CheckCircle2, FileWarning, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getDueWorkspaceItems, getInvoices, getProspects, getTodos, savePushSubscription } from "@/lib/storage";
-import type { Invoice, Prospect, Todo, WorkspaceItem } from "@/types";
+import { getInvoices, getProspects, getTodos, savePushSubscription } from "@/lib/storage";
+import type { Invoice, Prospect, Todo } from "@/types";
+import { canAccessPage, getActiveCompany } from "@/lib/company";
 
 type DueNotification = {
   id: string;
@@ -21,7 +22,7 @@ const dateOnly = () => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-function collectNotifications(invoices: Invoice[], prospects: Prospect[], workspaceItems: WorkspaceItem[], todos: Todo[]): DueNotification[] {
+function collectNotifications(invoices: Invoice[], prospects: Prospect[], todos: Todo[]): DueNotification[] {
   const today = dateOnly();
   const invoiceNotifications = invoices
     .filter((invoice) => ["sent", "overdue"].includes(invoice.status) && invoice.dueDate <= today)
@@ -29,13 +30,10 @@ function collectNotifications(invoices: Invoice[], prospects: Prospect[], worksp
   const taskNotifications = prospects
     .filter((prospect) => prospect.nextTask && prospect.nextTaskAt && prospect.nextTaskAt <= today && !["won", "lost"].includes(prospect.status))
     .map((prospect) => ({ id: `prospect-${prospect.id}`, title: prospect.nextTask as string, detail: `${prospect.companyName} · fällig ${formatDate(prospect.nextTaskAt as string)}`, date: prospect.nextTaskAt as string, href: "/prospects", kind: "task" as const, overdue: (prospect.nextTaskAt as string) < today }));
-  const workspaceNotifications = workspaceItems
-    .filter((item) => item.module !== "projects" && item.dueDate && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status))
-    .map((item) => ({ id: `workspace-${item.id}`, title: item.title, detail: `${moduleLabel(item.module)} · fällig ${formatDate(item.dueDate as string)}`, date: item.dueDate as string, href: `/workspace/${item.module}`, kind: "task" as const, overdue: (item.dueDate as string) < today }));
   const todoNotifications = todos
     .filter((todo) => todo.dueDate && todo.dueDate <= today && todo.status !== "done")
     .map((todo) => ({ id: `todo-${todo.id}`, title: todo.title, detail: `To-Do · fällig ${formatDate(todo.dueDate as string)}`, date: todo.dueDate as string, href: "/todos", kind: "task" as const, overdue: (todo.dueDate as string) < today }));
-  return [...invoiceNotifications, ...taskNotifications, ...workspaceNotifications, ...todoNotifications].sort((a, b) => a.date.localeCompare(b.date));
+  return [...invoiceNotifications, ...taskNotifications, ...todoNotifications].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export function NotificationCenter() {
@@ -52,7 +50,15 @@ export function NotificationCenter() {
 
   useEffect(() => {
     let active = true;
-    const refresh = () => Promise.all([getInvoices(), getProspects(), getDueWorkspaceItems(), getTodos()]).then(([invoices, prospects, workspaceItems, todos]) => { if (active) setItems(collectNotifications(invoices, prospects, workspaceItems, todos)); }).catch(() => undefined);
+    const refresh = () => getActiveCompany().then(async (company) => {
+      if (!company) return;
+      const [invoices, prospects, todos] = await Promise.all([
+        canAccessPage(company,"dashboard") ? getInvoices() : Promise.resolve([]),
+        canAccessPage(company,"prospects") ? getProspects() : Promise.resolve([]),
+        canAccessPage(company,"todos") ? getTodos() : Promise.resolve([]),
+      ]);
+      if (active) setItems(collectNotifications(invoices,prospects,todos));
+    }).catch(() => undefined);
     void refresh();
     if ("serviceWorker" in navigator) navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription()).then((subscription) => { if (active) setPushReady(Boolean(subscription)); }).catch(() => undefined);
     const interval = window.setInterval(refresh, 60_000);
@@ -122,7 +128,6 @@ export function NotificationCenter() {
 }
 
 function formatDate(value: string) { return new Date(`${value}T12:00:00`).toLocaleDateString("de-CH"); }
-function moduleLabel(module: string) { return ({ projects: "Projekt", ideas: "Idee", tasks: "Aufgabe", offers: "Offerte", people: "Team", commissions: "Provision", leads: "Lead", operations: "Ablauf" } as Record<string, string>)[module] ?? "Workspace"; }
 
 function urlBase64ToUint8Array(value: string) {
   const padding = "=".repeat((4 - value.length % 4) % 4);

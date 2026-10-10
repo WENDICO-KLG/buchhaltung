@@ -111,6 +111,7 @@ export interface CompanyProfile {
     oneTimeRevenueDate?: string;
     notes?: string;
     logoUrl?: string;
+    commissionEnabled?: boolean;
     createdAt: string;
     updatedAt: string;
   }

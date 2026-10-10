@@ -39,7 +39,7 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     for (const [table, extra] of Object.entries(columns)) {
       await db.exec(`create table public.${table}(id text primary key, user_id uuid not null${extra}); alter table public.${table} enable row level security; grant all on public.${table} to authenticated; create policy "users manage own ${table}" on public.${table} for all to authenticated using(auth.uid() = user_id) with check(auth.uid() = user_id);`);
     }
-    await db.exec(`insert into public.customers values ('existing', '${owner}'), ('foreign', '${outsider}');`);
+    await db.exec(`insert into public.customers(id,user_id) values ('existing', '${owner}'), ('foreign', '${outsider}');`);
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011120000_company_memberships.sql", import.meta.url), "utf8"));
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011130000_todo_assignees.sql", import.meta.url), "utf8"));
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011140000_security_hardening.sql", import.meta.url), "utf8"));
@@ -156,6 +156,32 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await assert.rejects(db.query("select * from public.company_team($1)", [owner]));
     assert.equal(await scalar("select public.create_company('New Company')"), member);
     await assert.rejects(db.query("select public.create_company('Duplicate')"));
+    await db.exec("reset role; alter table public.customers add column company_name text; alter table public.customers add column one_time_revenue numeric default 0; alter table public.customers add column one_time_revenue_date date;");
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011160000_commissions_and_page_access.sql", import.meta.url), "utf8"));
+    await login(owner);
+    await db.query("update public.customers set commission_enabled = true, company_name = 'Testkunde', one_time_revenue = 1000 where id = 'existing'");
+    await db.query("select public.set_company_member_role($1,$2,'member')", [owner,viewer]);
+    await db.query("select public.set_customer_commission($1,'existing',$2,10)", [owner, viewer]);
+    await db.query("insert into public.customers(id,user_id,company_name,commission_enabled) values ('second-commission',$1,'Anderer Kunde',true)", [owner]);
+    await db.query("select public.set_customer_commission($1,'second-commission',$1,20)", [owner]);
+    await assert.rejects(db.query("select public.set_customer_commission($1,'shared',$2,10)", [owner,viewer]));
+    await assert.rejects(db.query("select public.set_customer_commission($1,'foreign',$2,10)", [owner, viewer]));
+    await assert.rejects(db.query("select public.set_customer_commission($1,'existing',$2,10)", [owner, outsider]));
+    await db.query("select public.set_member_pages($1,$2,array['calculator'])", [owner, viewer]);
+    await login(viewer);
+    assert.equal(await scalar("select count(*)::int from public.customers"),0);
+    assert.equal(await scalar("select count(*)::int from public.commission_customers($1)", [owner]),1);
+    assert.equal(await scalar("select customer_id from public.commission_customers($1)", [owner]),'existing');
+    await assert.rejects(db.query("insert into public.todos(id,user_id) values ('denied-page',$1)", [owner]));
+    await assert.rejects(db.query("select public.set_customer_commission($1,'existing',$2,20)", [owner, viewer]));
+    await assert.rejects(db.query("select public.set_member_pages($1,$2,array['customers'])", [owner,viewer]));
+    await login(owner);
+    await db.query("select public.set_member_pages($1,$2,array[]::text[])", [owner,viewer]);
+    await login(viewer);
+    await assert.rejects(db.query("select * from public.commission_customers($1)", [owner]));
+    await login(owner);
+    await db.query("update public.customers set commission_enabled = false where id = 'existing'");
+    assert.equal(await scalar("select count(*)::int from public.commission_customers($1) where customer_id = 'existing'", [owner]),0);
   } finally {
     await db.close();
   }
