@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 
 export type CompanyRole = "owner" | "admin" | "member" | "viewer";
 export type CompanyMembership = { company_id: string; company_name: string; role: CompanyRole };
-export type CompanyMember = { user_id: string; email: string; role: CompanyRole };
+export type CompanyMember = { user_id: string; email: string; role: CompanyRole; display_name?: string | null };
+export const companyMemberName = (member: CompanyMember) => member.display_name?.trim() || member.email;
 export type CompanyInvitation = { id: string; company_id: string; company_name: string; email: string; role: "admin" | "member" | "viewer"; expires_at: string };
 
 export const companyRoleLabels: Record<CompanyRole, string> = { owner: "Inhaber", admin: "Administrator", member: "Mitarbeiter", viewer: "Leser" };
@@ -22,6 +23,7 @@ export const inviteCompanyMember = (companyId: string, email: string, role: Comp
 export const acceptCompanyInvitation = (id: string) => rpc<string>("accept_company_invitation", { invitation: id });
 export const revokeCompanyInvitation = (id: string) => rpc<null>("revoke_company_invitation", { invitation: id });
 export const setCompanyMemberRole = (companyId: string, userId: string, role: CompanyInvitation["role"]) => rpc<null>("set_company_member_role", { company: companyId, member: userId, new_role: role });
+export const setCompanyMemberName = (companyId: string, userId: string, name: string) => rpc<null>("set_company_member_name", { company: companyId, member: userId, member_name: name.trim() });
 export const removeCompanyMember = (companyId: string, userId: string) => rpc<null>("remove_company_member", { company: companyId, member: userId });
 
 export async function getActiveCompany(): Promise<CompanyMembership | undefined> {

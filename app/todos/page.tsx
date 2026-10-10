@@ -7,7 +7,7 @@ import { CalendarClock, Check, Circle, CircleCheck, ContactRound, GripVertical, 
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { createTodo, createTodoComment, deleteTodo, getCustomers, getProspects, getTodoComments, getTodos, updateTodo } from "@/lib/storage";
 import { todayKey } from "@/lib/utils";
-import { currentCompanyId, getCompanyMembers } from "@/lib/company";
+import { companyMemberName, currentCompanyId, getCompanyMembers } from "@/lib/company";
 import type { CompanyMember } from "@/lib/company";
 import type { Customer, Prospect, Todo, TodoComment, TodoStatus } from "@/types";
 
@@ -74,7 +74,7 @@ export default function TodosPage() {
   function begin(id: string) { pendingIds.current.add(id); setPending([...pendingIds.current]); }
   function finish(id: string) { pendingIds.current.delete(id); setPending([...pendingIds.current]); }
   function relationName(todo: Todo) { return customers.find((customer) => customer.id === todo.customerId)?.companyName ?? prospects.find((prospect) => prospect.id === todo.prospectId)?.companyName; }
-  function assigneeName(todo: Todo) { return todo.assigneeId ? members.find((member) => member.user_id === todo.assigneeId)?.email ?? "Mitglied nicht mehr verfügbar" : "Nicht zugewiesen"; }
+  function assigneeName(todo: Todo) { const member = members.find((person) => person.user_id === todo.assigneeId); return todo.assigneeId ? member ? companyMemberName(member) : "Mitglied nicht mehr verfügbar" : "Nicht zugewiesen"; }
 
   async function setStatus(id: string, status: TodoStatus) {
     const previous = todos.find((todo) => todo.id === id);
@@ -148,7 +148,7 @@ export default function TodosPage() {
       <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-end">
         <label className="min-w-0 flex-1"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Suche</span><span className="relative block"><Search size={16} className="pointer-events-none absolute left-3 top-3.5 text-[var(--muted)]"/><input value={query} onChange={(event) => setQuery(event.target.value)} className="field pl-9" placeholder="Aufgabe oder Unternehmen"/></span></label>
         <label className="lg:w-64"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Bezug</span><select value={linkFilter} onChange={(event) => setLinkFilter(event.target.value as LinkChoice | "all")} className="field"><option value="all">Alle Bezüge</option><LinkOptions customers={customers} prospects={prospects}/></select></label>
-        <label className="min-w-0 lg:w-64"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} className="field"><option value="all">Alle Mitglieder</option><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{member.email}</option>)}</select></label>
+        <label className="min-w-0 lg:w-64"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} className="field"><option value="all">Alle Mitglieder</option><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}</select></label>
       </div>
       <div className="my-4 flex flex-wrap items-center gap-2" role="group" aria-label="Aufgabenfokus">
         {(Object.keys(focusLabels) as Focus[]).map((value) => <button key={value} aria-pressed={focus === value} onClick={() => setFocus(value)} className={focus === value ? "filter-active" : "filter"}>{focusLabels[value]}{value !== "all" && <span className="ml-2 tabular-nums">{todos.filter((todo) => matchesFocus(todo, value, today)).length}</span>}</button>)}
@@ -261,7 +261,7 @@ function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDe
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Aufgabe</span><input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} className="field"/></label>
         <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Status</span><select value={status} onChange={(event) => setStatus(event.target.value as TodoStatus)} className="field">{statusOrder.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
         <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Fällig am (optional)</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="field"/></label>
-        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich (optional)</span><select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)} className="field"><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{member.email}</option>)}{assigneeId && !members.some((member) => member.user_id === assigneeId) && <option value={assigneeId} disabled>Mitglied nicht mehr verfügbar</option>}</select></label>
+        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich (optional)</span><select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)} className="field"><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}{assigneeId && !members.some((member) => member.user_id === assigneeId) && <option value={assigneeId} disabled>Mitglied nicht mehr verfügbar</option>}</select></label>
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Kunde / Prospect (optional)</span><select value={link} onChange={(event) => setLink(event.target.value as LinkChoice)} className="field"><LinkOptions customers={customers} prospects={prospects}/>{selectedLinkMissing && <option value={link}>Bestehender Bezug (nicht verfügbar)</option>}</select></label>
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Notizen (optional)</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="field resize-y"/></label>
         <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">

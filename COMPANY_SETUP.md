@@ -22,6 +22,14 @@ aushebeln. Fuer weitere Updates ausschliesslich die Migrationen verwenden.
 
 ## Bedienung
 
+Mit `supabase/migrations/20261011150000_company_member_names.sql` werden
+firmenbezogene Anzeigenamen aktiviert. Unter Firma & Team den Stift neben
+dem Mitglied anklicken, Namen eingeben und speichern. Ein leerer Name stellt
+die E-Mail-Anzeige wieder her. Todo-Karten und Zuweisungslisten verwenden den
+Anzeigenamen. Inhaber duerfen alle Namen bearbeiten; Administratoren die Namen
+von Mitarbeitern und Lesern sowie ihren eigenen. Die E-Mail-Adresse des
+Benutzerkontos bleibt unveraendert.
+
 Unter Einstellungen > Firma & Team koennen Inhaber oder Administratoren eine
 E-Mail-Adresse einladen. Die Einladung erscheint nach Registrierung oder
 Anmeldung mit dieser bestaetigten E-Mail-Adresse in den Einstellungen des

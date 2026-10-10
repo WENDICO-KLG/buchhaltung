@@ -43,6 +43,7 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011120000_company_memberships.sql", import.meta.url), "utf8"));
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011130000_todo_assignees.sql", import.meta.url), "utf8"));
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011140000_security_hardening.sql", import.meta.url), "utf8"));
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011150000_company_member_names.sql", import.meta.url), "utf8"));
     await db.exec(`insert into auth.users values ('${viewer}', 'viewer@example.com', null), ('${admin}', 'admin@example.com', now()), ('${member}', 'member@example.com', now());`);
     const login = async (user) => {
       await db.exec("reset role");
@@ -52,6 +53,9 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     const scalar = async (sql, args = []) => Object.values((await db.query(sql, args)).rows[0])[0];
     await login(owner);
     assert.equal((await db.query("select * from public.my_companies()")).rows[0].company_name, "Wendico");
+    await db.query("select public.set_company_member_name($1, $1, ' Inhaber ')", [owner]);
+    assert.equal((await db.query("select * from public.company_team($1)", [owner])).rows[0].display_name, "Inhaber");
+    await assert.rejects(db.query("select public.set_company_member_name($1, $1, $2)", [owner, "x".repeat(101)]));
     await assert.rejects(db.query("select public.acquire_agent_request($1, $1)", [owner]));
     await assert.rejects(db.query("insert into public.push_subscriptions values ('bad', $1, 'https://localhost/push', 'key', 'auth')", [owner]));
     for (let index = 0; index < 10; index += 1) {
@@ -88,6 +92,7 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await assert.rejects(db.query("select public.accept_company_invitation($1)", [invitation]));
     await login(viewer);
     assert.equal(await scalar("select public.accept_company_invitation($1)", [invitation]), owner);
+    await assert.rejects(db.query("select public.set_company_member_name($1, $2, 'Changed')", [owner, viewer]));
     assert.equal(await scalar("select count(*)::int from public.customers"), 1);
     await assert.rejects(db.query("insert into public.customers values ('blocked', $1)", [owner]));
     await db.query("update public.customers set id = 'blocked' where id = 'existing'");
@@ -115,6 +120,11 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     const memberInvite = await scalar("select public.invite_company_member($1, 'member@example.com', 'member')", [owner]);
     await login(admin);
     await db.query("select public.accept_company_invitation($1)", [adminInvite]);
+    await db.query("select public.set_company_member_name($1, $2, 'Teammitglied')", [owner, viewer]);
+    await assert.rejects(db.query("select public.set_company_member_name($1, $1, 'Changed')", [owner]));
+    await db.query("select public.set_company_member_name($1, $2, 'Administrator')", [owner, admin]);
+    await db.query("select public.set_company_member_name($1, $2, '')", [owner, viewer]);
+    assert.equal((await db.query("select * from public.company_team($1)", [owner])).rows.find((person) => person.user_id === viewer).display_name, null);
     await assert.rejects(db.query("select public.set_company_member_role($1, $2, 'viewer')", [owner, owner]));
     await assert.rejects(db.query("select public.invite_company_member($1, 'other@example.com', 'admin')", [owner]));
     await db.query("select public.set_company_member_role($1, $2, 'viewer')", [owner, viewer]);
@@ -135,6 +145,7 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await db.query("update public.company_invitations set expires_at = now() - interval '1 second' where id = $1", [expired]);
     await login(outsider);
     await assert.rejects(db.query("select public.accept_company_invitation($1)", [expired]));
+    await assert.rejects(db.query("select public.set_company_member_name($1, $1, 'Changed')", [owner]));
     assert.equal(await scalar("select count(*)::int from storage.objects"), 0);
     await login(admin);
     await db.query("select public.remove_company_member($1, $2)", [owner, member]);

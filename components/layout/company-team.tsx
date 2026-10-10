@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Check, MailPlus, Trash2, Users, X } from "lucide-react";
+import { Building2, Check, MailPlus, Pencil, Trash2, Users, X } from "lucide-react";
+import { companyMemberName, setCompanyMemberName } from "@/lib/company";
+import { supabase } from "@/lib/supabase";
 import { acceptCompanyInvitation, companyRoleLabels, createCompany, getActiveCompany, getCompanyInvitations, getCompanyMembers, getMyCompanies, getMyInvitations, inviteCompanyMember, removeCompanyMember, revokeCompanyInvitation, selectCompany, setCompanyMemberRole } from "@/lib/company";
 import type { CompanyInvitation, CompanyMember, CompanyMembership } from "@/lib/company";
 
@@ -9,9 +11,10 @@ type EditableRole = CompanyInvitation["role"];
 const roles: EditableRole[] = ["viewer", "member", "admin"];
 
 async function loadTeam() {
+  const { data: { user } } = await supabase.auth.getUser();
   const [companies, active, incoming] = await Promise.all([getMyCompanies(), getActiveCompany(), getMyInvitations()]);
   const [members, invitations] = active ? await Promise.all([getCompanyMembers(active.company_id), ["owner", "admin"].includes(active.role) ? getCompanyInvitations(active.company_id) : Promise.resolve([])]) : [[], []];
-  return { companies, active, incoming, members, invitations };
+  return { companies, active, incoming, members, invitations, userId: user?.id };
 }
 
 export function CompanyTeam() {
@@ -27,11 +30,15 @@ export function CompanyTeam() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<EditableRole>("member");
   const [name, setName] = useState("");
+  const [userId, setUserId] = useState<string>();
+  const [editingNameId, setEditingNameId] = useState<string>();
+  const [memberName, setMemberName] = useState("");
   const manage = active?.role === "owner" || active?.role === "admin";
 
   function applyTeam(data: Awaited<ReturnType<typeof loadTeam>>) {
     setCompanies(data.companies); setActive(data.active); setIncoming(data.incoming);
     setMembers(data.members); setInvitations(data.invitations);
+    setUserId(data.userId);
   }
 
   useEffect(() => {
@@ -62,7 +69,19 @@ export function CompanyTeam() {
         </form>}
         <div className="mt-6 divide-y divide-white/10">{members.map((member) => {
           const editable = manage && member.role !== "owner" && (active.role === "owner" || member.role !== "admin");
-          return <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-3 py-3"><p className="min-w-0 break-all text-sm text-white">{member.email}</p><div className="flex items-center gap-2">{editable ? <select className="field w-40" aria-label={`Rolle von ${member.email}`} value={member.role} disabled={busy} onChange={(event) => act(() => setCompanyMemberRole(active.company_id, member.user_id, event.target.value as EditableRole), "Rolle aktualisiert.")}>{roles.filter((value) => value !== "admin" || active.role === "owner").map((value) => <option key={value} value={value}>{companyRoleLabels[value]}</option>)}</select> : <span className="text-sm text-[#8292ae]">{companyRoleLabels[member.role]}</span>}{editable && <button type="button" className="header-icon-button" disabled={busy} title="Mitglied entfernen" aria-label={`${member.email} entfernen`} onClick={() => { if (window.confirm(`${member.email} aus der Firma entfernen?`)) act(() => removeCompanyMember(active.company_id, member.user_id), "Mitglied entfernt."); }}><Trash2 size={16}/></button>}</div></div>;
+          const label = companyMemberName(member);
+          const nameEditable = manage && (active.role === "owner" || member.role === "member" || member.role === "viewer" || member.user_id === userId);
+          return <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div className="min-w-0 flex-1">
+              {editingNameId === member.user_id ? <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); void act(async () => { await setCompanyMemberName(active.company_id, member.user_id, memberName); setEditingNameId(undefined); }, "Name gespeichert."); }}>
+                <label className="min-w-0 flex-1 text-xs text-[var(--muted)]">Anzeigename<input autoFocus className="field mt-1" maxLength={100} value={memberName} disabled={busy} onChange={(event) => setMemberName(event.target.value)}/></label>
+                <button type="submit" className="header-icon-button" disabled={busy} title="Name speichern" aria-label="Name speichern"><Check size={16}/></button>
+                <button type="button" className="header-icon-button" disabled={busy} onClick={() => setEditingNameId(undefined)} title="Abbrechen" aria-label="Namensänderung abbrechen"><X size={16}/></button>
+              </form> : <div className="flex items-center gap-2"><p className="min-w-0 break-words text-sm text-white [overflow-wrap:anywhere]">{label}</p>{nameEditable && <button type="button" className="icon-button shrink-0" disabled={busy} title="Name bearbeiten" aria-label={`Name von ${label} bearbeiten`} onClick={() => { setEditingNameId(member.user_id); setMemberName(member.display_name ?? ""); }}><Pencil size={15}/></button>}</div>}
+              {member.display_name && <p className="mt-1 break-all text-xs text-[#8292ae]">{member.email}</p>}
+            </div>
+            <div className="flex items-center gap-2">{editable ? <select className="field w-40" aria-label={`Rolle von ${label}`} value={member.role} disabled={busy} onChange={(event) => act(() => setCompanyMemberRole(active.company_id, member.user_id, event.target.value as EditableRole), "Rolle aktualisiert.")}>{roles.filter((value) => value !== "admin" || active.role === "owner").map((value) => <option key={value} value={value}>{companyRoleLabels[value]}</option>)}</select> : <span className="text-sm text-[#8292ae]">{companyRoleLabels[member.role]}</span>}{editable && <button type="button" className="header-icon-button" disabled={busy} title="Mitglied entfernen" aria-label={`${label} entfernen`} onClick={() => { if (window.confirm(`${label} aus der Firma entfernen?`)) act(() => removeCompanyMember(active.company_id, member.user_id), "Mitglied entfernt."); }}><Trash2 size={16}/></button>}</div>
+          </div>;
         })}</div>
         {invitations.length > 0 && <div className="mt-6"><h3 className="text-sm font-semibold text-white">Offene Einladungen</h3>{invitations.map((invite) => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 py-3"><div className="min-w-0"><p className="break-all text-sm text-white">{invite.email}</p><p className="text-xs text-[#8292ae]">{companyRoleLabels[invite.role]} · bis {new Date(invite.expires_at).toLocaleDateString("de-CH")}</p></div>{(active.role === "owner" || invite.role !== "admin") && <button type="button" className="header-icon-button" disabled={busy} title="Einladung widerrufen" aria-label={`Einladung fuer ${invite.email} widerrufen`} onClick={() => act(() => revokeCompanyInvitation(invite.id), "Einladung widerrufen.")}><X size={16}/></button>}</div>)}</div>}
       </>}
