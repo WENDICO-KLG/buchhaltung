@@ -166,7 +166,7 @@ export default function TodosPage() {
               const columnTodos = filtered.filter((todo) => todo.status === status);
               const displayed = status === "done" && !showAllDone ? columnTodos.slice(0, 10) : columnTodos;
               return <BoardColumn key={status} status={status} count={columnTodos.length} disabled={loading || loadFailed}>
-                {loading ? <div className="space-y-3" aria-label="Aufgaben werden geladen">{[0, 1, 2].map((index) => <div key={index} className="h-32 animate-pulse rounded-lg border border-[var(--line)] bg-[var(--surface)]"/>)}</div> : displayed.map((todo) => <TaskCard key={todo.id} todo={todo} relation={relationName(todo)} assignee={assigneeName(todo)} busy={pending.includes(todo.id)} onOpen={() => setEditor(todo)} onStatusChange={(next) => void setStatus(todo.id, next)}/>)}
+                {loading ? <div className="space-y-3" aria-label="Aufgaben werden geladen">{[0, 1, 2].map((index) => <div key={index} className="h-32 animate-pulse rounded-lg border border-[var(--line)] bg-[var(--surface)]"/>)}</div> : displayed.map((todo) => <TaskCard key={todo.id} todo={todo} relation={relationName(todo)} assignee={assigneeName(todo)} busy={pending.includes(todo.id)} onOpen={() => setEditor(todo)} onStatusChange={(next) => void setStatus(todo.id, next)} onDelete={() => { setError(""); void remove(todo).catch((cause) => setError(cause instanceof Error ? cause.message : "Aufgabe konnte nicht gelöscht werden.")); }}/>)}
                 {!loading && !loadFailed && !columnTodos.length && <p className="py-10 text-center text-xs text-[var(--muted)]">{hasFilters ? "Keine passenden Aufgaben" : status === "done" ? "Noch nichts erledigt" : status === "in_progress" ? "Keine Aufgabe in Bearbeitung" : "Keine offenen Aufgaben"}</p>}
                 {status === "done" && columnTodos.length > 10 && <button onClick={() => setShowAllDone(!showAllDone)} className="action w-full text-xs">{showAllDone ? "Weniger anzeigen" : `${columnTodos.length - 10} weitere anzeigen`}</button>}
               </BoardColumn>;
@@ -203,7 +203,7 @@ function TaskSummary({ todo, relation, assignee }: { todo: Todo; relation?: stri
   </>;
 }
 
-function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange }: { todo: Todo; relation?: string; assignee: string; busy: boolean; onOpen: () => void; onStatusChange: (status: TodoStatus) => void }) {
+function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange, onDelete }: { todo: Todo; relation?: string; assignee: string; busy: boolean; onOpen: () => void; onStatusChange: (status: TodoStatus) => void; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: todo.id, disabled: busy });
   return <article ref={setNodeRef} aria-busy={busy} className={`rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm ${isDragging ? "opacity-30" : ""}`}>
     <div className="flex items-start gap-1">
@@ -212,6 +212,7 @@ function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange }: { 
     </div>
     <div className="mt-3 flex items-center gap-2 border-t border-[var(--line)] pt-2">
       <select value={todo.status} disabled={busy} onChange={(event) => onStatusChange(event.target.value as TodoStatus)} aria-label={`Status: ${todo.title}`} className="min-h-8 min-w-0 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--muted)]">{statusOrder.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
+      <button type="button" onClick={onDelete} disabled={busy} className="icon-button shrink-0 text-[var(--danger)]" title="Aufgabe löschen" aria-label={`Aufgabe löschen: ${todo.title}`}><Trash2 size={16}/></button>
       {busy && <LoaderCircle size={14} className="animate-spin text-[var(--primary)]" aria-label="Wird gespeichert"/>}
     </div>
   </article>;
