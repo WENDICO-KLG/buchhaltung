@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { Viewport } from "next";
+import { connection } from "next/server";
 import { PwaRegistration } from "@/components/pwa-registration";
 import "./globals.css";
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#13263a", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
   return <html lang="de"><body><PwaRegistration />{children}</body></html>;
 }

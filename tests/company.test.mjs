@@ -1,0 +1,151 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { PGlite } from "@electric-sql/pglite";
+
+test("company migration, invitations, roles and tenant isolation", async () => {
+  const db = new PGlite();
+  const owner = "00000000-0000-0000-0000-000000000001";
+  const viewer = "00000000-0000-0000-0000-000000000002";
+  const outsider = "00000000-0000-0000-0000-000000000003";
+  const admin = "00000000-0000-0000-0000-000000000004";
+  const member = "00000000-0000-0000-0000-000000000005";
+  try {
+    await db.exec(`
+      create role anon; create role authenticated; create role service_role;
+      create schema auth; create schema storage;
+      grant usage on schema public, auth, storage to authenticated;
+      create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz);
+      create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+      create table storage.objects(id text primary key, bucket_id text, name text);
+      create table storage.buckets(id text primary key, public boolean);
+      insert into storage.buckets values ('customer-logos', true);
+      create table public.push_subscriptions(id text primary key, user_id uuid, endpoint text, p256dh text, auth text);
+      grant all on public.push_subscriptions to authenticated;
+      alter table storage.objects enable row level security;
+      grant all on storage.objects to authenticated;
+      create policy "public can view customer logos" on storage.objects for select to public using (bucket_id = 'customer-logos');
+      create table public.company_profiles(id text primary key, user_id uuid unique, company_name text);
+      alter table public.company_profiles enable row level security;
+      grant all on public.company_profiles to authenticated;
+      insert into auth.users values ('${owner}', 'owner@example.com', now()), ('${outsider}', 'outsider@example.com', now());
+      insert into public.company_profiles values ('company-${owner}', '${owner}', 'Wendico');
+    `);
+    const columns = {
+      invoices: "", expenses: ", customer_id text, document_id text", documents: ", storage_path text",
+      customers: "", prospects: "", workspace_items: "", workspace_files: ", item_id text, storage_path text",
+      monthly_goals: "", todos: ", customer_id text, prospect_id text", todo_comments: ", todo_id text",
+    };
+    for (const [table, extra] of Object.entries(columns)) {
+      await db.exec(`create table public.${table}(id text primary key, user_id uuid not null${extra}); alter table public.${table} enable row level security; grant all on public.${table} to authenticated; create policy "users manage own ${table}" on public.${table} for all to authenticated using(auth.uid() = user_id) with check(auth.uid() = user_id);`);
+    }
+    await db.exec(`insert into public.customers values ('existing', '${owner}'), ('foreign', '${outsider}');`);
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011120000_company_memberships.sql", import.meta.url), "utf8"));
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011130000_todo_assignees.sql", import.meta.url), "utf8"));
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011140000_security_hardening.sql", import.meta.url), "utf8"));
+    await db.exec(`insert into auth.users values ('${viewer}', 'viewer@example.com', null), ('${admin}', 'admin@example.com', now()), ('${member}', 'member@example.com', now());`);
+    const login = async (user) => {
+      await db.exec("reset role");
+      await db.query("select set_config('request.jwt.claim.sub', $1, false)", [user]);
+      await db.exec("set role authenticated");
+    };
+    const scalar = async (sql, args = []) => Object.values((await db.query(sql, args)).rows[0])[0];
+    await login(owner);
+    assert.equal((await db.query("select * from public.my_companies()")).rows[0].company_name, "Wendico");
+    await assert.rejects(db.query("select public.acquire_agent_request($1, $1)", [owner]));
+    await assert.rejects(db.query("insert into public.push_subscriptions values ('bad', $1, 'https://localhost/push', 'key', 'auth')", [owner]));
+    for (let index = 0; index < 10; index += 1) {
+      await db.query("insert into public.push_subscriptions values ($1, $2, $3, 'key', 'auth')", [`push-${index}`, owner, `https://fcm.googleapis.com/fcm/send/token${index}`]);
+    }
+    await assert.rejects(db.query("insert into public.push_subscriptions values ('overflow', $1, 'https://fcm.googleapis.com/fcm/send/extra', 'key', 'auth')", [owner]));
+    await db.exec("reset role");
+    assert.equal(await scalar("select public from storage.buckets where id = 'customer-logos'"), false);
+    assert.equal(await scalar("select count(*)::int from pg_policies where policyname = 'public can view customer logos'"), 0);
+    const leases = [];
+    for (let index = 0; index < 3; index += 1) leases.push(await scalar("select public.acquire_agent_request($1, $1)", [owner]));
+    assert.ok(leases.every(Boolean));
+    assert.equal(await scalar("select public.acquire_agent_request($1, $1)", [owner]), null);
+    for (const lease of leases) await db.query("select public.release_agent_request($1)", [lease]);
+    for (let index = 0; index < 3; index += 1) {
+      const lease = await scalar("select public.acquire_agent_request($1, $1)", [owner]);
+      assert.ok(lease);
+      await db.query("select public.release_agent_request($1)", [lease]);
+    }
+    assert.equal(await scalar("select public.acquire_agent_request($1, $1)", [owner]), null);
+    await assert.rejects(db.query("select public.acquire_agent_request($1, $2)", [owner, outsider]));
+    await db.query("update public.agent_requests set started_at = now() - interval '2 minutes'");
+    for (let index = 0; index < 94; index += 1) await db.query("insert into public.agent_requests(company_id, actor_id, started_at, active_until) values ($1, $1, now() - interval '2 minutes', now())", [owner]);
+    assert.equal(await scalar("select public.acquire_agent_request($1, $1)", [owner]), null);
+    await login(owner);
+    const invitation = await scalar("select public.invite_company_member($1, $2, $3)", [owner, "VIEWER@example.com", "viewer"]);
+    await login(viewer);
+    assert.equal(await scalar("select count(*)::int from public.my_companies()"), 0);
+    assert.equal(await scalar("select count(*)::int from public.my_company_invitations()"), 0);
+    await assert.rejects(db.query("select public.accept_company_invitation($1)", [invitation]));
+    await db.exec("reset role");
+    await db.query("update auth.users set email_confirmed_at = now() where id = $1", [viewer]);
+    await login(outsider);
+    await assert.rejects(db.query("select public.accept_company_invitation($1)", [invitation]));
+    await login(viewer);
+    assert.equal(await scalar("select public.accept_company_invitation($1)", [invitation]), owner);
+    assert.equal(await scalar("select count(*)::int from public.customers"), 1);
+    await assert.rejects(db.query("insert into public.customers values ('blocked', $1)", [owner]));
+    await db.query("update public.customers set id = 'blocked' where id = 'existing'");
+    assert.equal(await scalar("select id from public.customers"), "existing");
+    await db.query("delete from public.customers where id = 'existing'");
+    assert.equal(await scalar("select count(*)::int from public.customers"), 1);
+    await assert.rejects(db.query("select public.invite_company_member($1, 'bad@example.com', 'admin')", [owner]));
+    await assert.rejects(db.query("update public.company_members set role = 'owner'"));
+    await login(owner);
+    await db.query("select public.set_company_member_role($1, $2, 'member')", [owner, viewer]);
+    await login(viewer);
+    await db.query("insert into public.customers values ('shared', $1)", [owner]);
+    await assert.rejects(db.query("insert into public.customers values ('foreign-write', $1)", [outsider]));
+    await assert.rejects(db.query("update public.customers set user_id = $1 where id = 'shared'", [outsider]));
+    await assert.rejects(db.query("insert into public.expenses(id, user_id, customer_id) values ('cross', $1, 'foreign')", [owner]));
+    await db.query("insert into public.expenses(id, user_id, customer_id) values ('valid', $1, 'shared')", [owner]);
+    await db.query("insert into public.documents values ('doc', $1, $2)", [owner, `${owner}/doc/file.pdf`]);
+    await assert.rejects(db.query("insert into public.documents values ('bad-doc', $1, $2)", [owner, `${outsider}/file.pdf`]));
+    await assert.rejects(db.query("insert into public.company_profiles values ('bad-profile', $1, 'Changed')", [owner]));
+    await db.query("insert into storage.objects values ('file', 'documents', $1)", [`${owner}/doc/file.pdf`]);
+    await login(owner);
+    await db.query("update public.company_profiles set company_name = 'Shared Company' where user_id = $1", [owner]);
+    assert.equal((await db.query("select * from public.my_companies()")).rows[0].company_name, "Shared Company");
+    const adminInvite = await scalar("select public.invite_company_member($1, 'admin@example.com', 'admin')", [owner]);
+    const memberInvite = await scalar("select public.invite_company_member($1, 'member@example.com', 'member')", [owner]);
+    await login(admin);
+    await db.query("select public.accept_company_invitation($1)", [adminInvite]);
+    await assert.rejects(db.query("select public.set_company_member_role($1, $2, 'viewer')", [owner, owner]));
+    await assert.rejects(db.query("select public.invite_company_member($1, 'other@example.com', 'admin')", [owner]));
+    await db.query("select public.set_company_member_role($1, $2, 'viewer')", [owner, viewer]);
+    await login(viewer);
+    assert.equal(await scalar("select count(*)::int from storage.objects"), 1);
+    await assert.rejects(db.query("insert into storage.objects values ('blocked', 'documents', $1)", [`${owner}/blocked.pdf`]));
+    await login(member);
+    await db.query("select public.accept_company_invitation($1)", [memberInvite]);
+    await db.query("insert into public.todos(id, user_id, assignee_id) values ('assigned', $1, $2)", [owner, member]);
+    await assert.rejects(db.query("insert into public.todos(id, user_id, assignee_id) values ('foreign-assignee', $1, $2)", [owner, outsider]));
+    await assert.rejects(db.query("update public.todos set assignee_id = $1 where id = 'assigned'", [outsider]));
+    await db.query("update public.todos set assignee_id = null where id = 'assigned'");
+    assert.equal(await scalar("select assignee_id from public.todos where id = 'assigned'"), null);
+    await db.query("update public.todos set assignee_id = $1 where id = 'assigned'", [member]);
+    await login(owner);
+    const expired = await scalar("select public.invite_company_member($1, 'outsider@example.com', 'member')", [owner]);
+    await db.exec("reset role");
+    await db.query("update public.company_invitations set expires_at = now() - interval '1 second' where id = $1", [expired]);
+    await login(outsider);
+    await assert.rejects(db.query("select public.accept_company_invitation($1)", [expired]));
+    assert.equal(await scalar("select count(*)::int from storage.objects"), 0);
+    await login(admin);
+    await db.query("select public.remove_company_member($1, $2)", [owner, member]);
+    assert.equal(await scalar("select assignee_id from public.todos where id = 'assigned'"), null);
+    assert.equal(await scalar("select user_id::text from public.todos where id = 'assigned'"), owner);
+    await login(member);
+    assert.equal(await scalar("select count(*)::int from public.customers"), 0);
+    await assert.rejects(db.query("select * from public.company_team($1)", [owner]));
+    assert.equal(await scalar("select public.create_company('New Company')"), member);
+    await assert.rejects(db.query("select public.create_company('Duplicate')"));
+  } finally {
+    await db.close();
+  }
+});

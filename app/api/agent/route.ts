@@ -1,11 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { readAgentBody } from "@/lib/agent-security";
 
 const runtimeEnv = process.env as Record<string, string | undefined>;
 const model = runtimeEnv[["GEMINI", "MODEL"].join("_")] ?? "gemini-3.8-flash";
 const ollamaUrl = runtimeEnv[["OLLAMA", "BASE", "URL"].join("_")] ?? "http://127.0.0.1:11434";
-
-type AgentRequest = { message?: string };
 
 function getSupabase(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -54,34 +53,54 @@ async function getContext(supabase: ReturnType<typeof getSupabase>, userId: stri
       ueberfaelligeRechnungen: invoiceRows.filter((row) => row.status === "overdue").length,
       ausgaben: expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
     },
-    rechnungen: invoiceRows,
-    ausgaben: expenseRows,
-    kunden: customers.data ?? [],
-    prospects: prospects.data ?? [],
-    offeneAufgaben: (todos.data ?? []).filter((row) => row.status !== "done"),
+    datenbasis: "Maximal 200 Datensätze je Bereich; möglicherweise unvollständig. Keine personenbezogenen Detaildaten.",
+    waehrungen: [...new Set([...invoiceRows, ...expenseRows].map((row) => row.currency))],
+    kunden: { anzahl: customers.data?.length ?? 0, wiederkehrenderUmsatz: (customers.data ?? []).reduce((sum, row) => sum + Number(row.monthly_revenue ?? 0), 0) },
+    prospects: { anzahl: prospects.data?.length ?? 0, geschaetzterWert: (prospects.data ?? []).reduce((sum, row) => sum + Number(row.estimated_value ?? 0), 0) },
+    offeneAufgaben: (todos.data ?? []).filter((row) => row.status !== "done").length,
     monatsziele: goals.data ?? [],
   };
 }
 
 export async function POST(request: Request) {
+  let limiter: ReturnType<typeof getSupabase> | undefined;
+  let lease: string | undefined;
   try {
-    const body = (await request.json()) as AgentRequest;
-    const message = body.message?.trim();
-    if (!message || message.length > 4000) return NextResponse.json({ error: "Bitte gib eine Frage mit maximal 4000 Zeichen ein." }, { status: 400 });
     const supabase = getSupabase(request);
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) return NextResponse.json({ error: "Du musst angemeldet sein." }, { status: 401 });
+    let body: Awaited<ReturnType<typeof readAgentBody>>;
+    try { body = await readAgentBody(request); }
+    catch (error) { return NextResponse.json({ error: "Ungültige Anfrage. Maximal 4000 Zeichen und 20 KB JSON." }, { status: error instanceof Error && error.message === "body_too_large" ? 413 : 400 }); }
+    const message = body.message;
+
+    const { data: companies, error: companyError } = await supabase.rpc("my_companies");
+    if (companyError) throw new Error("Die Firmen konnten nicht geladen werden. Bitte pruefe die Firmen-Migration.");
+    const memberships = (companies ?? []) as Array<{ company_id: string; role: string }>;
+    const company = body.companyId ? memberships.find((membership) => membership.company_id === body.companyId) : memberships[0];
+    if (!company) return NextResponse.json({ error: "Kein Zugriff auf diese Firma." }, { status: 403 });
+
+    const serviceKey = runtimeEnv.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return NextResponse.json({ error: "Der AI-Dienst ist noch nicht sicher konfiguriert." }, { status: 503 });
+    limiter = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: reservation, error: limitError } = await limiter.rpc("acquire_agent_request", { company: company.company_id, actor: userData.user.id });
+    if (limitError) return NextResponse.json({ error: "Die Sicherheitskonfiguration des AI-Dienstes ist nicht verfügbar." }, { status: 503 });
+    if (!reservation) return NextResponse.json({ error: "Anfragenlimit erreicht. Bitte später erneut versuchen." }, { status: 429, headers: { "Retry-After": "60" } });
+    lease = reservation as string;
 
     const todoTitle = findTodoTitle(message);
     if (todoTitle) {
+      if (company.role === "viewer") return NextResponse.json({ error: "Du hast nur Leserechte in dieser Firma." }, { status: 403 });
       const id = `todo-${crypto.randomUUID()}`;
       const today = new Date().toISOString().slice(0, 10);
-      const { error } = await supabase.from("todos").insert({ id, user_id: userData.user.id, title: todoTitle, status: "not_started", created_at: today, updated_at: today });
+      const { error } = await supabase.from("todos").insert({ id, user_id: company.company_id, title: todoTitle, status: "not_started", created_at: today, updated_at: today });
       if (error) throw new Error("Die Aufgabe konnte nicht angelegt werden.");
       return NextResponse.json({ answer: `Aufgabe angelegt: **${todoTitle}**`, action: { type: "todo_created", title: todoTitle } });
     }
 
-    const context = await getContext(supabase, userData.user.id);
+    const approvedCompanies = (runtimeEnv.AI_APPROVED_COMPANY_IDS ?? "").split(",").map((id) => id.trim());
+    if (!approvedCompanies.includes(company.company_id)) return NextResponse.json({ error: "AI-Auswertungen sind für diese Firma noch nicht freigegeben." }, { status: 403 });
+    const context = await getContext(supabase, company.company_id);
     const systemInstruction = "Du bist Wendico Agent, ein nüchterner Assistent für Schweizer Kleinunternehmen. Analysiere ausschließlich die bereitgestellten Daten. Antworte auf Deutsch, nenne Annahmen, rechne nachvollziehbar und gib höchstens drei konkrete nächste Schritte. Behaupte niemals, eine Aktion ausgeführt zu haben, außer sie ist im System ausdrücklich bestätigt. Geldbeträge sind in CHF, sofern nicht anders angegeben.";
     const prompt = `Frage: ${message}\n\nDaten aus Wendico:\n${JSON.stringify(context)}`;
     const geminiKey = runtimeEnv[["GEMINI", "API", "KEY"].join("_")];
@@ -106,8 +125,7 @@ export async function POST(request: Request) {
         await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
       }
       if (!gemini.ok) {
-        const providerError = await gemini.text();
-        console.error("Gemini request failed", gemini.status, providerError.slice(0, 500));
+        console.error("Gemini request failed", gemini.status);
         if ([429, 500, 502, 503, 504].includes(gemini.status) && groqKey) {
           const groq = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
@@ -124,18 +142,11 @@ export async function POST(request: Request) {
             const result = (await groq.json()) as { choices?: Array<{ message?: { content?: string } }> };
             answer = result.choices?.[0]?.message?.content?.trim();
           } else {
-            console.error("Groq fallback failed", groq.status, (await groq.text()).slice(0, 500));
+            console.error("Groq fallback failed", groq.status);
           }
         }
         if (answer) return NextResponse.json({ answer });
-        let detail = "";
-        try {
-          const parsed = JSON.parse(providerError) as { error?: { message?: string } };
-          detail = parsed.error?.message ? ` ${parsed.error.message.slice(0, 240)}` : "";
-        } catch {
-          detail = "";
-        }
-        throw new Error(`Gemini konnte nicht antworten (HTTP ${gemini.status}).${detail}`);
+        throw new Error(`Gemini konnte nicht antworten (HTTP ${gemini.status}).`);
       }
       const result = (await gemini.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
       answer = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
@@ -152,8 +163,7 @@ export async function POST(request: Request) {
         }),
       });
       if (!groq.ok) {
-        const providerError = await groq.text();
-        console.error("Groq request failed", groq.status, providerError.slice(0, 500));
+        console.error("Groq request failed", groq.status);
         throw new Error(`Der alternative KI-Anbieter konnte nicht antworten (HTTP ${groq.status}). Prüfe den Groq-Key und das Modell in Netlify.`);
       }
       const result = (await groq.json()) as { choices?: Array<{ message?: { content?: string } }> };
@@ -172,8 +182,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ answer: answer || "Ich konnte dazu keine Auswertung erstellen." });
   } catch (error) {
-    console.error("Agent request failed", error);
-    const message = error instanceof Error ? error.message : "Der Agent konnte nicht antworten.";
-    return NextResponse.json({ error: message }, { status: message.includes("Authentifizierung") || message.includes("angemeldet") ? 401 : 500 });
+    const unauthorized = error instanceof Error && error.message.includes("Authentifizierung");
+    console.error("Agent request failed", unauthorized ? "unauthorized" : "request_failed");
+    return NextResponse.json({ error: unauthorized ? "Du musst angemeldet sein." : "Der Agent konnte nicht antworten. Bitte später erneut versuchen." }, { status: unauthorized ? 401 : 500 });
+  } finally {
+    if (limiter && lease) {
+      try { await limiter.rpc("release_agent_request", { lease }); } catch { console.error("Agent lease release failed"); }
+    }
   }
 }

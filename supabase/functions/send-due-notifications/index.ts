@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
+import { isAllowedPushEndpoint } from "../_shared/push-security.ts";
 
 const required = (name: string) => {
   const value = Deno.env.get(name);
@@ -23,13 +24,17 @@ Deno.serve(async (request) => {
 
   let sent = 0;
   for (const item of dueItems ?? []) {
+    const { data: members, error: membersError } = await supabase.from("company_members").select("user_id").eq("company_id", item.user_id);
+    if (membersError) throw membersError;
+    if (!members?.length) continue;
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from("push_subscriptions")
       .select("id, endpoint, p256dh, auth")
-      .eq("user_id", item.user_id);
+      .in("user_id", members.map((member) => member.user_id));
     if (subscriptionsError) throw subscriptionsError;
 
     for (const subscription of subscriptions ?? []) {
+      if (!isAllowedPushEndpoint(subscription.endpoint)) continue;
       const { data: priorDelivery } = await supabase
         .from("push_deliveries")
         .select("id")
@@ -40,7 +45,7 @@ Deno.serve(async (request) => {
       if (priorDelivery) continue;
 
       try {
-        await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: item.title, body: item.body, href: item.href, tag: item.item_id }));
+        await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: item.title, body: item.body, href: item.href, tag: item.item_id }), { timeout: 5000, TTL: 3600 });
         await supabase.from("push_deliveries").insert({ subscription_id: subscription.id, item_id: item.item_id });
         sent += 1;
       } catch (error) {

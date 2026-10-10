@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Image from "next/image";
 import { Bot, CheckCircle2, LoaderCircle, Send, Sparkles, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { currentCompanyId } from "@/lib/company";
 
 type ChatMessage = { role: "user" | "agent"; content: string };
 
@@ -35,7 +36,8 @@ export function AgentChat() {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error("Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.");
-      const response = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ message }) });
+      const companyId = await currentCompanyId();
+      const response = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, companyId }) });
       const responseText = await response.text();
       let result: { answer?: string; error?: string } = {};
       try { result = JSON.parse(responseText) as { answer?: string; error?: string }; } catch { result = {}; }

@@ -14,7 +14,11 @@ Für ein späteres Hosting muss `NEXT_PUBLIC_VAPID_PUBLIC_KEY` zusätzlich beim 
 
 ## 1. Datenbankschema aktualisieren
 
-Im Supabase Dashboard unter **SQL Editor** den vollständigen Inhalt von `supabase/schema.sql` ausführen.
+Fuer ein neues Projekt das Basisschema und anschliessend alle Migrationen anwenden.
+Fuer bestehende Projekte nur ausstehende Migrationen via `npx supabase db push`
+anwenden. Nach Aktivierung der Firmenrechte das alte `supabase/schema.sql` nicht
+erneut ausfuehren. Die Firmenaktivierung ist in [COMPANY_SETUP.md](COMPANY_SETUP.md)
+beschrieben.
 
 ## 2. Supabase CLI anmelden und Projekt verknüpfen
 

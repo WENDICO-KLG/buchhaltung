@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Building2, ContactRound, FileArchive, FileText, LayoutDashboard, ListTodo, LogOut, Menu, PanelsTopLeft, ReceiptText, Settings, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { getActiveCompany } from "@/lib/company";
 import { NotificationCenter } from "@/components/layout/notification-center";
 
 const navigation = [
@@ -28,6 +29,8 @@ export function WorkspaceShell({ children, active, title = "Wendico" }: { childr
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [companyReady, setCompanyReady] = useState(false);
+  const [companyError, setCompanyError] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">(() => typeof window !== "undefined" && window.localStorage.getItem("wendico-books.theme") === "light" ? "light" : "dark");
 
   useEffect(() => {
@@ -47,9 +50,24 @@ export function WorkspaceShell({ children, active, title = "Wendico" }: { childr
   }, []);
 
   useEffect(() => { if (!checkingSession && !user) router.replace("/login"); }, [checkingSession, router, user]);
+  useEffect(() => {
+    if (!user) return;
+    let mounted = true;
+    getActiveCompany().then((company) => {
+      if (!mounted) return;
+      if (!company && active !== "Einstellungen") { router.replace("/settings"); return; }
+      setCompanyReady(true);
+    }).catch((error: unknown) => {
+      if (!mounted) return;
+      if (active === "Einstellungen") setCompanyReady(true);
+      else setCompanyError(error instanceof Error ? error.message : "Firma konnte nicht geladen werden.");
+    });
+    return () => { mounted = false; };
+  }, [active, router, user]);
   async function logout() { await supabase.auth.signOut(); router.replace("/login"); }
 
-  if (checkingSession || !user) return <main className="workspace-bg flex min-h-screen items-center justify-center"><div className="panel rounded-2xl px-8 py-7 text-center"><div className="mx-auto h-10 w-10 animate-pulse rounded-xl bg-[#287bff]" /><p className="mt-4 text-sm text-white">Wendico wird geladen...</p></div></main>;
+  if (companyError) return <main className="workspace-bg flex min-h-screen items-center justify-center px-6"><div className="max-w-lg"><p role="alert" className="text-sm text-red-400">{companyError}</p><Link href="/settings" className="action mt-4">Einstellungen</Link><button onClick={logout} className="action mt-4 ml-3"><LogOut size={16}/>Abmelden</button></div></main>;
+  if (checkingSession || !user || !companyReady) return <main className="workspace-bg flex min-h-screen items-center justify-center"><div className="panel rounded-2xl px-8 py-7 text-center"><div className="mx-auto h-10 w-10 animate-pulse rounded-xl bg-[#287bff]" /><p className="mt-4 text-sm text-white">Wendico wird geladen...</p></div></main>;
 
   const initials = (user.email?.slice(0, 2) ?? "WE").toUpperCase();
   const links = navigation.map(({ label, href, icon: Icon }) => <Link key={label} href={href} title={label} onClick={() => setMobileOpen(false)} className={`flex h-9 items-center justify-center gap-3 rounded-xl px-3 transition ${active === label ? "bg-[#153a71] text-[#65c6ff] blue-glow" : "text-[#7185a6] hover:bg-white/5 hover:text-white"}`}><Icon size={18} strokeWidth={1.8} /><span className="md:hidden">{label}</span></Link>);

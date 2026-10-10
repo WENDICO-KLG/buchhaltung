@@ -1,4 +1,11 @@
 -- Run this file in the Supabase SQL editor.
+do $$
+begin
+  if to_regclass('public.companies') is not null then
+    raise exception 'Firmenrechte sind bereits aktiv. Nur ausstehende Migrationen anwenden, nicht das Basisschema.';
+  end if;
+end;
+$$;
 create table if not exists public.invoices (
   id text primary key,
   user_id uuid not null references auth.users(id) on delete cascade,

@@ -44,6 +44,11 @@ a { color: inherit; text-decoration: none; }
 .field { width: 100%; min-height: 2.75rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--surface); padding: .625rem .875rem; color: var(--ink); font-size: .9375rem; outline: none; }
 .field:focus { border-color: #5b91c1; box-shadow: 0 0 0 3px rgba(31,95,153,.12); }
 .field::placeholder { color: #98a2b3; }
+.todo-page, .todo-dialog { letter-spacing: 0; }
+.todo-page .field.pl-9 { padding-left: 2.25rem; }
+.todo-page .primary, .todo-dialog .primary { color: var(--paper); }
+.todo-page button:disabled, .todo-page select:disabled, .todo-dialog button:disabled { cursor: not-allowed; opacity: .6; }
+.todo-dialog::backdrop { background: rgba(0, 0, 0, .6); }
 .google-login { width: 100%; border: 1px solid #d0d5dd; border-radius: .5rem; background: #fff !important; padding: .75rem 1rem; color: #202124 !important; font-size: .9375rem; font-weight: 650; cursor: pointer; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
 .google-login:hover { border-color: #98a2b3; background: #f9fafb !important; }
 .google-login:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid rgba(31,95,153,.28); outline-offset: 2px; }

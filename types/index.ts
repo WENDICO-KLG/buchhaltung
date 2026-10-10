@@ -12,6 +12,7 @@ export interface Todo {
     dueDate?: string;
     customerId?: string;
     prospectId?: string;
+    assigneeId?: string;
     createdAt: string;
     updatedAt: string;
   }
