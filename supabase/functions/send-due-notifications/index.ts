@@ -24,6 +24,8 @@ Deno.serve(async (request) => {
 
   let sent = 0;
   for (const item of dueItems ?? []) {
+    if (item.href === "/workspace/projects") continue;
+    const href = item.href.startsWith("/applications/") ? "/dashboard" : item.href;
     const { data: members, error: membersError } = await supabase.from("company_members").select("user_id").eq("company_id", item.user_id);
     if (membersError) throw membersError;
     if (!members?.length) continue;
@@ -45,7 +47,7 @@ Deno.serve(async (request) => {
       if (priorDelivery) continue;
 
       try {
-        await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: item.title, body: item.body, href: item.href, tag: item.item_id }), { timeout: 5000, TTL: 3600 });
+        await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: item.title, body: item.body, href, tag: item.item_id }), { timeout: 5000, TTL: 3600 });
         await supabase.from("push_deliveries").insert({ subscription_id: subscription.id, item_id: item.item_id });
         sent += 1;
       } catch (error) {

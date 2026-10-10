@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, FilePlus2, Pencil, Target, X } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Pencil, Target, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, saveMonthlyGoal } from "@/lib/storage";
 import { addMonths, customerOneTimeRevenue, customerRecurringRevenue, formatCurrency, invoiceNet, invoiceStatusLabels, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
@@ -194,15 +194,13 @@ export default function Dashboard() {
           <input type="date" value={customTo} onChange={(event) => setCustomTo(event.target.value)} aria-label="Bis" className="field w-auto"/>
         </div>}
         {((rangeMode === "month" && rangeMonth !== currentMonth) || (rangeMode === "year" && rangeYear !== Number(today.slice(0, 4)))) && <button onClick={() => { setRangeMonth(currentMonth); setRangeYear(Number(today.slice(0, 4))); }} className="action">Heute</button>}
-        <Link href="/applications/new" className="primary gap-2"><FilePlus2 size={16}/>Neue Rechnung</Link>
       </div>
     </header>
 
-    {receivables.overdueCount > 0 && <Link href="/applications" className="mt-6 flex items-center gap-3 rounded-lg border border-[#f79009] bg-[#fffaeb] px-4 py-3 text-sm text-[#93370d] hover:border-[#dc6803]">
+    {receivables.overdueCount > 0 && <div className="mt-6 flex items-center gap-3 rounded-lg border border-[#f79009] bg-[#fffaeb] px-4 py-3 text-sm text-[#93370d]">
       <CircleAlert size={17} className="flex-none"/>
       <span className="flex-1"><strong>{receivables.overdueCount} überfällige Rechnung{receivables.overdueCount === 1 ? "" : "en"}</strong> über {formatCurrency(receivables.overdueAmount)} – jetzt nachfassen.</span>
-      <ChevronRight size={16}/>
-    </Link>}
+    </div>}
 
     {foreignCurrencyCount > 0 && <p className="mt-3 text-xs text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
 
@@ -273,10 +271,9 @@ export default function Dashboard() {
       <section className="panel rounded-xl p-5 lg:col-span-2 xl:col-span-1">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--ink)]">Letzte Rechnungen</h2>
-          <Link href="/applications" className="text-xs font-semibold text-[var(--primary)]">Alle anzeigen</Link>
         </div>
         <ul className="mt-4 divide-y divide-[var(--line)]">
-          {recent.map((invoice) => { const status: InvoiceStatus = isOverdue(invoice) ? "overdue" : invoice.status; return <li key={invoice.id}><Link href={`/applications/${invoice.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 hover:bg-[var(--surface-soft)]">
+          {recent.map((invoice) => { const status: InvoiceStatus = isOverdue(invoice) ? "overdue" : invoice.status; return <li key={invoice.id}><div className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--ink)]">{invoice.customerName}</p>
               <p className="mt-0.5 text-xs text-[var(--muted)]">{invoice.invoiceNumber} · fällig {dateLabel(invoice.dueDate)}</p>
@@ -285,7 +282,7 @@ export default function Dashboard() {
               <span className="text-sm font-semibold tabular-nums text-[var(--ink)]">{formatCurrency(invoiceTotal(invoice.items), invoice.currency)}</span>
               <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusStyles[status]}`}>{invoiceStatusLabels[status]}</span>
             </div>
-          </Link></li>; })}
+          </div></li>; })}
           {!recent.length && <li className="py-10 text-center text-sm text-[var(--muted)]">{loading ? "Lädt..." : "Noch keine Rechnungen."}</li>}
         </ul>
       </section>

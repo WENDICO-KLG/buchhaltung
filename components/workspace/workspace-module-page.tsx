@@ -16,7 +16,7 @@ export type WorkspaceModuleConfig = {
 type FormValue = Omit<WorkspaceItem, "id" | "module" | "createdAt" | "updatedAt" | "amount" | "tags"> & { amount: string; tags: string };
 
 const moduleLinks = [
-  ["Projekte", "/workspace/projects"], ["Ideen", "/workspace/ideas"], ["Aufgaben", "/workspace/tasks"], ["Offerten", "/workspace/offers"],
+  ["Ideen", "/workspace/ideas"], ["Aufgaben", "/workspace/tasks"], ["Offerten", "/workspace/offers"],
   ["Team & Partner", "/workspace/people"], ["Provisionen", "/workspace/commissions"], ["Leads", "/workspace/leads"], ["Abläufe", "/workspace/operations"],
 ];
 

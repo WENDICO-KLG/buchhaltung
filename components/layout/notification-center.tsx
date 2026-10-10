@@ -25,12 +25,12 @@ function collectNotifications(invoices: Invoice[], prospects: Prospect[], worksp
   const today = dateOnly();
   const invoiceNotifications = invoices
     .filter((invoice) => ["sent", "overdue"].includes(invoice.status) && invoice.dueDate <= today)
-    .map((invoice) => ({ id: `invoice-${invoice.id}`, title: `Rechnung ${invoice.invoiceNumber}`, detail: `${invoice.customerName} · fällig ${formatDate(invoice.dueDate)}`, date: invoice.dueDate, href: `/applications/${invoice.id}`, kind: "invoice" as const, overdue: invoice.dueDate < today }));
+    .map((invoice) => ({ id: `invoice-${invoice.id}`, title: `Rechnung ${invoice.invoiceNumber}`, detail: `${invoice.customerName} · fällig ${formatDate(invoice.dueDate)}`, date: invoice.dueDate, href: "/dashboard", kind: "invoice" as const, overdue: invoice.dueDate < today }));
   const taskNotifications = prospects
     .filter((prospect) => prospect.nextTask && prospect.nextTaskAt && prospect.nextTaskAt <= today && !["won", "lost"].includes(prospect.status))
     .map((prospect) => ({ id: `prospect-${prospect.id}`, title: prospect.nextTask as string, detail: `${prospect.companyName} · fällig ${formatDate(prospect.nextTaskAt as string)}`, date: prospect.nextTaskAt as string, href: "/prospects", kind: "task" as const, overdue: (prospect.nextTaskAt as string) < today }));
   const workspaceNotifications = workspaceItems
-    .filter((item) => item.dueDate && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status))
+    .filter((item) => item.module !== "projects" && item.dueDate && !["Erledigt", "Abgeschlossen", "Bezahlt", "Gewonnen", "Archiviert", "Angenommen", "Abgelehnt", "Verloren", "Storniert", "Ehemalig"].includes(item.status))
     .map((item) => ({ id: `workspace-${item.id}`, title: item.title, detail: `${moduleLabel(item.module)} · fällig ${formatDate(item.dueDate as string)}`, date: item.dueDate as string, href: `/workspace/${item.module}`, kind: "task" as const, overdue: (item.dueDate as string) < today }));
   const todoNotifications = todos
     .filter((todo) => todo.dueDate && todo.dueDate <= today && todo.status !== "done")
