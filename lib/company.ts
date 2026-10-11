@@ -8,6 +8,8 @@ export type CompanyMember = { user_id: string; email: string; role: CompanyRole;
 export const canAccessPage = (company: CompanyMembership, page: string) => company.role === "owner" || company.role === "admin" || page === "settings" || (company.allowed_pages ?? []).includes(page as CompanyPage);
 export type CommissionCustomer = { customer_id: string; company_name: string; amount: number | string; payment_date?: string | null; member_id?: string | null; member_name?: string | null; rate: number | string };
 export const getCommissionCustomers = (companyId: string) => rpc<CommissionCustomer[]>("commission_customers", { company: companyId });
+export type DashboardCommission = { payment_date: string; total: number | string };
+export const getDashboardCommissions = async () => rpc<DashboardCommission[]>("dashboard_commissions", { company: await currentCompanyId() });
 export const setCustomerCommission = (companyId: string, customerId: string, memberId: string, rate: number) => rpc<null>("set_customer_commission", { company: companyId, customer: customerId, member: memberId || null, percentage: rate });
 export const setMemberPages = (companyId: string, userId: string, pages: CompanyPage[]) => rpc<null>("set_member_pages", { company: companyId, member: userId, pages });
 export const companyMemberName = (member: CompanyMember) => member.display_name?.trim() || member.email;

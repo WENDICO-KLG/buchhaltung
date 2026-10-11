@@ -158,6 +158,7 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await assert.rejects(db.query("select public.create_company('Duplicate')"));
     await db.exec("reset role; alter table public.customers add column company_name text; alter table public.customers add column one_time_revenue numeric default 0; alter table public.customers add column one_time_revenue_date date;");
     await db.exec(readFileSync(new URL("../supabase/migrations/20261011160000_commissions_and_page_access.sql", import.meta.url), "utf8"));
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011170000_dashboard_commissions.sql", import.meta.url), "utf8"));
     await login(owner);
     await db.query("update public.customers set commission_enabled = true, company_name = 'Testkunde', one_time_revenue = 1000 where id = 'existing'");
     await db.query("select public.set_company_member_role($1,$2,'member')", [owner,viewer]);
@@ -167,14 +168,25 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await assert.rejects(db.query("select public.set_customer_commission($1,'shared',$2,10)", [owner,viewer]));
     await assert.rejects(db.query("select public.set_customer_commission($1,'foreign',$2,10)", [owner, viewer]));
     await assert.rejects(db.query("select public.set_customer_commission($1,'existing',$2,10)", [owner, outsider]));
+    await db.query("update public.customers set one_time_revenue_date = '2026-10-01' where id = 'existing'");
+    for (const id of ['bonus-first','bonus-second']) {
+      await db.query("insert into public.customers(id,user_id,company_name,commission_enabled,one_time_revenue,one_time_revenue_date) values ($1,$2,'Bonus',true,1000,'2026-10-02')", [id,owner]);
+      await db.query("select public.set_customer_commission($1,$2,$3,10)", [owner,id,viewer]);
+    }
+    assert.equal(Number(await scalar("select sum(total) from public.dashboard_commissions($1)", [owner])),450);
     await db.query("select public.set_member_pages($1,$2,array['calculator'])", [owner, viewer]);
     await login(viewer);
     assert.equal(await scalar("select count(*)::int from public.customers"),0);
-    assert.equal(await scalar("select count(*)::int from public.commission_customers($1)", [owner]),1);
-    assert.equal(await scalar("select customer_id from public.commission_customers($1)", [owner]),'existing');
+    await assert.rejects(db.query("select * from public.dashboard_commissions($1)", [owner]));
+    assert.equal(await scalar("select count(*)::int from public.commission_customers($1)", [owner]),3);
+    assert.equal(await scalar("select count(*)::int from public.commission_customers($1) where customer_id = 'second-commission'", [owner]),0);
     await assert.rejects(db.query("insert into public.todos(id,user_id) values ('denied-page',$1)", [owner]));
     await assert.rejects(db.query("select public.set_customer_commission($1,'existing',$2,20)", [owner, viewer]));
     await assert.rejects(db.query("select public.set_member_pages($1,$2,array['customers'])", [owner,viewer]));
+    await login(owner);
+    await db.query("select public.set_member_pages($1,$2,array['dashboard'])", [owner,viewer]);
+    await login(viewer);
+    assert.equal(Number(await scalar("select sum(total) from public.dashboard_commissions($1)", [owner])),450);
     await login(owner);
     await db.query("select public.set_member_pages($1,$2,array[]::text[])", [owner,viewer]);
     await login(viewer);

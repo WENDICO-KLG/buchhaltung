@@ -6,6 +6,8 @@ import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, 
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Pencil, Target, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, saveMonthlyGoal } from "@/lib/storage";
+import { getDashboardCommissions } from "@/lib/company";
+import type { DashboardCommission } from "@/lib/company";
 import { addMonths, customerOneTimeRevenue, customerRecurringRevenue, formatCurrency, invoiceNet, invoiceStatusLabels, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
 import type { Customer, Expense, Invoice, InvoiceStatus, MonthlyGoal } from "@/types";
 
@@ -31,7 +33,7 @@ const statusStyles: Record<InvoiceStatus, string> = {
   cancelled: "bg-[var(--surface-soft)] text-[var(--muted)] line-through",
 };
 
-function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], customers: Customer[]) {
+function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], customers: Customer[], commissionRows: DashboardCommission[]) {
   const months = monthKeysBetween(range.from, range.to);
   const invoiceRevenue = invoices.filter((invoice) => countsAsRevenue(invoice, range)).reduce((sum, invoice) => sum + invoiceNet(invoice.items), 0);
   const oneTimeRevenue = customers.reduce((sum, customer) => sum + customerOneTimeRevenue(customer, range.from, range.to), 0);
@@ -44,13 +46,15 @@ function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], c
   const plannedCosts = months.reduce((sum, key, index) => key > currentMonth ? sum + recurringCostsByMonth[index] : sum, 0);
   const revenue = invoiceRevenue + oneTimeRevenue + recurringRevenue;
   const costs = oneTimeCosts + recurringCosts;
-  return { revenue, costs, profit: revenue - costs, recurringRevenue, recurringCosts, plannedRevenue, plannedCosts };
+  const commissions = commissionRows.filter((row) => inRange(row.payment_date, range)).reduce((sum, row) => sum + Number(row.total), 0);
+  return { revenue, costs, commissions, profit: revenue - costs - commissions, recurringRevenue, recurringCosts, plannedRevenue, plannedCosts };
 }
 
 export default function Dashboard() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [commissions, setCommissions] = useState<DashboardCommission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -68,8 +72,8 @@ export default function Dashboard() {
   const goalMonth = rangeMode === "month" ? rangeMonth : currentMonth;
 
   useEffect(() => {
-    Promise.all([getInvoices(), getExpenses(), getCustomers()])
-      .then(([invoiceData, expenseData, customerData]) => { setInvoices(invoiceData); setExpenses(expenseData); setCustomers(customerData); })
+    Promise.all([getInvoices(), getExpenses(), getCustomers(), getDashboardCommissions()])
+      .then(([invoiceData, expenseData, customerData, commissionData]) => { setInvoices(invoiceData); setExpenses(expenseData); setCustomers(customerData); setCommissions(commissionData); })
       .catch(() => setError("Finanzdaten konnten nicht geladen werden."))
       .finally(() => setLoading(false));
   }, []);
@@ -102,9 +106,9 @@ export default function Dashboard() {
   const periodLabel = rangeMode === "month" ? monthLabel(rangeMonth) : rangeMode === "year" ? `Jahr ${rangeYear}` : `${dateLabel(range.from)} – ${dateLabel(range.to)}`;
   const comparisonLabel = rangeMode === "month" ? "Vormonat" : "Vorjahr";
 
-  const metrics = useMemo(() => computePeriod(range, invoices, expenses, customers), [range, invoices, expenses, customers]);
-  const previous = useMemo(() => previousRange && computePeriod(previousRange, invoices, expenses, customers), [previousRange, invoices, expenses, customers]);
-  const goalMetrics = useMemo(() => computePeriod({ from: `${goalMonth}-01`, to: lastDayOfMonth(goalMonth) }, invoices, expenses, customers), [goalMonth, invoices, expenses, customers]);
+  const metrics = useMemo(() => computePeriod(range, invoices, expenses, customers, commissions), [range, invoices, expenses, customers, commissions]);
+  const previous = useMemo(() => previousRange && computePeriod(previousRange, invoices, expenses, customers, commissions), [previousRange, invoices, expenses, customers, commissions]);
+  const goalMetrics = useMemo(() => computePeriod({ from: `${goalMonth}-01`, to: lastDayOfMonth(goalMonth) }, invoices, expenses, customers, commissions), [goalMonth, invoices, expenses, customers, commissions]);
 
   const receivables = useMemo(() => {
     const open = invoices.filter(({ status }) => status === "sent" || status === "overdue");
@@ -118,10 +122,10 @@ export default function Dashboard() {
     const keys = rangeMode === "month" ? Array.from({ length: 6 }, (_, index) => addMonths(rangeMonth, index - 5)) : monthKeysBetween(range.from, range.to);
     return keys.map((key) => {
       const monthRange = rangeMode === "custom" ? { from: key === keys[0] ? range.from : `${key}-01`, to: key === keys[keys.length - 1] ? range.to : lastDayOfMonth(key) } : { from: `${key}-01`, to: lastDayOfMonth(key) };
-      const values = computePeriod(monthRange, invoices, expenses, customers);
-      return { month: new Date(`${key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short", year: keys.length > 12 || rangeMode === "custom" ? "2-digit" : undefined }), Einnahmen: values.revenue, Ausgaben: values.costs, Ergebnis: values.profit };
+      const values = computePeriod(monthRange, invoices, expenses, customers, commissions);
+      return { month: new Date(`${key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short", year: keys.length > 12 || rangeMode === "custom" ? "2-digit" : undefined }), Einnahmen: values.revenue, Ausgaben: values.costs, Provisionen: values.commissions, Ergebnis: values.profit };
     });
-  }, [rangeMode, rangeMonth, range, invoices, expenses, customers]);
+  }, [rangeMode, rangeMonth, range, invoices, expenses, customers, commissions]);
 
   const revenueByCustomer = useMemo(() => {
     const totals = new Map<string, number>();
@@ -204,13 +208,14 @@ export default function Dashboard() {
 
     {foreignCurrencyCount > 0 && <p className="mt-3 text-xs text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
 
-    <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <Kpi label="Umsatz (netto)" value={metrics.revenue} previous={previous?.revenue} comparisonLabel={comparisonLabel} loading={loading}
         hint={metrics.plannedRevenue > 0 ? `inkl. ${formatCurrency(metrics.plannedRevenue)} erwartet` : `davon ${formatCurrency(metrics.recurringRevenue)} wiederkehrend`}/>
       <Kpi label="Ausgaben" value={metrics.costs} previous={previous?.costs} comparisonLabel={comparisonLabel} loading={loading} inverse
         hint={metrics.plannedCosts > 0 ? `inkl. ${formatCurrency(metrics.plannedCosts)} geplant` : `davon ${formatCurrency(metrics.recurringCosts)} wiederkehrend`}/>
+      <Kpi label="Provisionen" value={metrics.commissions} previous={previous?.commissions} comparisonLabel={comparisonLabel} loading={loading} inverse hint="10 % Grundprovision inkl. Monatsbonus"/>
       <Kpi label="Ergebnis" value={metrics.profit} previous={previous?.profit} comparisonLabel={comparisonLabel} loading={loading} emphasize
-        hint={margin === undefined ? "Keine Einnahmen im Zeitraum" : `Marge ${margin}%`}/>
+        hint={margin === undefined ? "Keine Einnahmen im Zeitraum" : `Nach Ausgaben und Provisionen · Marge ${margin}%`}/>
       <Kpi label="Offene Forderungen" value={receivables.openAmount} loading={loading}
         hint={receivables.openCount ? `${receivables.openCount} offen${receivables.overdueCount ? ` · ${receivables.overdueCount} überfällig` : ""} · Stand heute` : "Alles bezahlt · Stand heute"}/>
     </section>
@@ -219,11 +224,11 @@ export default function Dashboard() {
       <section className="panel rounded-xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--ink)]">Einnahmen & Ausgaben</h2>
+            <h2 className="text-sm font-semibold text-[var(--ink)]">Einnahmen & Abzüge</h2>
             <p className="text-xs text-[var(--muted)]">{rangeMode === "month" ? "Letzte 6 Monate" : "Pro Monat im Zeitraum"}</p>
           </div>
-          <div className="flex gap-4 text-xs text-[var(--muted)]">
-            <Legend color="#3aa981" label="Einnahmen"/><Legend color="#f97066" label="Ausgaben"/><Legend color="#4f8fd1" label="Ergebnis" line/>
+          <div className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
+            <Legend color="#3aa981" label="Einnahmen"/><Legend color="#f97066" label="Ausgaben"/><Legend color="#dba52a" label="Provisionen"/><Legend color="#4f8fd1" label="Ergebnis" line/>
           </div>
         </div>
         <div className="mt-5 h-[280px]">
@@ -235,6 +240,7 @@ export default function Dashboard() {
               <Tooltip formatter={(value) => formatCurrency(Number(value))} cursor={{ fill: "var(--surface-soft)" }} contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)" }}/>
               <Bar dataKey="Einnahmen" fill="#3aa981" radius={[4, 4, 0, 0]} maxBarSize={28}/>
               <Bar dataKey="Ausgaben" fill="#f97066" radius={[4, 4, 0, 0]} maxBarSize={28}/>
+              <Bar dataKey="Provisionen" fill="#dba52a" radius={[4, 4, 0, 0]} maxBarSize={28}/>
               <Line dataKey="Ergebnis" stroke="#4f8fd1" strokeWidth={2} dot={{ r: 3 }} type="monotone"/>
             </ComposedChart>
           </ResponsiveContainer>

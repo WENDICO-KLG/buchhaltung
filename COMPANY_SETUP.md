@@ -22,6 +22,14 @@ aushebeln. Fuer weitere Updates ausschliesslich die Migrationen verwenden.
 
 ## Bedienung
 
+Die Migration `supabase/migrations/20261011170000_dashboard_commissions.sql`
+ergaenzt datumsbezogene Provisionssummen fuer die Uebersicht. Das Ergebnis wird
+als Umsatz minus Ausgaben minus Provisionen inklusive Monatsbonus berechnet.
+Die Uebersichtsfreigabe reicht zum Lesen dieser Summen; sie enthaelt keine
+Mitarbeiterzuordnungen. Provisionen sind berechnete Verpflichtungen, keine
+bestaetigten Auszahlungen. Nicht nochmals als Ausgabe erfassen, sonst werden
+sie doppelt abgezogen. Undatierte oder nicht zugeteilte Kunden zaehlen nicht.
+
 Die Migration `supabase/migrations/20261011160000_commissions_and_page_access.sql`
 aktiviert den Rechner und Seitenfreigaben. Inhaber und Administratoren koennen
 unter Firma & Team die Seiten fuer Mitarbeiter/Leser einzeln freigeben.
