@@ -9,7 +9,11 @@ import { createTodo, createTodoComment, deleteTodo, getCustomers, getProspects, 
 import { todayKey } from "@/lib/utils";
 import { companyMemberName, currentCompanyId, getCompanyMembers } from "@/lib/company";
 import type { CompanyMember } from "@/lib/company";
-import type { Customer, Prospect, Todo, TodoComment, TodoStatus } from "@/types";
+import type { Customer, Prospect, Todo, TodoComment, TodoPriority, TodoStatus } from "@/types";
+import { Flag } from "lucide-react";
+import { compareTodoPriority, priorityLabels } from "@/lib/todo-priority";
+
+function PriorityOptions() { return <>{(Object.entries(priorityLabels) as [TodoPriority,string][]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</>; }
 
 const statusLabels: Record<TodoStatus, string> = { not_started: "Offen", in_progress: "In Bearbeitung", done: "Erledigt" };
 const statusOrder: TodoStatus[] = ["not_started", "in_progress", "done"];
@@ -39,7 +43,7 @@ function matchesFocus(todo: Todo, focus: Focus, today: string) {
 
 function compareTodos(left: Todo, right: Todo) {
   if (left.status === "done" && right.status === "done") return right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id);
-  return (left.dueDate || "9999-12-31").localeCompare(right.dueDate || "9999-12-31") || right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id);
+  return compareTodoPriority(left, right, todayKey());
 }
 
 export default function TodosPage() {
@@ -48,6 +52,7 @@ export default function TodosPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState<TodoPriority | "all">("all");
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState("");
@@ -96,6 +101,17 @@ export default function TodosPage() {
     if (over && statusOrder.includes(over.id as TodoStatus)) void setStatus(String(active.id), over.id as TodoStatus);
   }
 
+  async function setPriority(id: string, priority: TodoPriority) {
+    if (pendingIds.current.has(id)) return;
+    begin(id); setError("");
+    try {
+      await updateTodo(id, { priority });
+      setTodos((current) => current.map((todo) => todo.id === id ? { ...todo, priority, updatedAt: todayKey() } : todo));
+      setNotice(`Priorität ${priorityLabels[priority]} gespeichert.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Priorität konnte nicht gespeichert werden."); }
+    finally { finish(id); }
+  }
+
   async function save(input: TodoInput) {
     if (editor === null) return;
     const id = editor === "new" ? "new" : editor.id;
@@ -125,12 +141,13 @@ export default function TodosPage() {
   const today = todayKey();
   const search = query.trim().toLocaleLowerCase("de-CH");
   const filtered = todos.filter((todo) => matchesFocus(todo, focus, today))
+    .filter((todo) => priorityFilter === "all" || todo.priority === priorityFilter)
     .filter((todo) => assigneeFilter === "all" || (todo.assigneeId ?? "") === assigneeFilter)
     .filter((todo) => linkFilter === "all" || (linkFilter === "" ? !todo.customerId && !todo.prospectId : linkFilter === (todo.customerId ? `customer:${todo.customerId}` : `prospect:${todo.prospectId}`)))
     .filter((todo) => `${todo.title} ${todo.notes ?? ""} ${relationName(todo) ?? ""}`.toLocaleLowerCase("de-CH").includes(search)).sort(compareTodos);
   const openCount = todos.filter((todo) => todo.status !== "done").length;
   const dragTodo = todos.find((todo) => todo.id === dragId);
-  const hasFilters = focus !== "all" || Boolean(query) || linkFilter !== "all" || assigneeFilter !== "all";
+  const hasFilters = focus !== "all" || Boolean(query) || linkFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all";
 
   return <WorkspaceShell active="To-Dos" title="Wendico / To-Dos">
     <div className="todo-page page-enter pb-20">
@@ -151,8 +168,9 @@ export default function TodosPage() {
         <label className="min-w-0 lg:w-64"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} className="field"><option value="all">Alle Mitglieder</option><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}</select></label>
       </div>
       <div className="my-4 flex flex-wrap items-center gap-2" role="group" aria-label="Aufgabenfokus">
+        <label className="mr-2"><span className="sr-only">Priorität filtern</span><select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value as TodoPriority | "all")} className="field text-xs"><option value="all">Alle Prioritäten</option><PriorityOptions/></select></label>
         {(Object.keys(focusLabels) as Focus[]).map((value) => <button key={value} aria-pressed={focus === value} onClick={() => setFocus(value)} className={focus === value ? "filter-active" : "filter"}>{focusLabels[value]}{value !== "all" && <span className="ml-2 tabular-nums">{todos.filter((todo) => matchesFocus(todo, value, today)).length}</span>}</button>)}
-        {hasFilters && <button className="icon-button" title="Filter zurücksetzen" aria-label="Filter zurücksetzen" onClick={() => { setFocus("all"); setQuery(""); setLinkFilter("all"); setAssigneeFilter("all"); }}><X size={16}/></button>}
+        {hasFilters && <button className="icon-button" title="Filter zurücksetzen" aria-label="Filter zurücksetzen" onClick={() => { setFocus("all"); setQuery(""); setLinkFilter("all"); setAssigneeFilter("all"); setPriorityFilter("all"); }}><X size={16}/></button>}
       </div>
       <DndContext sensors={sensors} collisionDetection={(args) => args.pointerCoordinates ? pointerWithin(args) : closestCorners(args)} onDragStart={({ active }) => setDragId(String(active.id))} onDragEnd={endDrag} onDragCancel={() => setDragId(null)} accessibility={{ screenReaderInstructions: { draggable: "Leertaste zum Aufnehmen. Mit den Pfeiltasten die Statusspalte wählen. Leertaste zum Ablegen, Escape zum Abbrechen." }, announcements: {
         onDragStart: ({ active }) => `Aufgabe ${todos.find((todo) => todo.id === active.id)?.title ?? ""} aufgenommen.`,
@@ -166,7 +184,7 @@ export default function TodosPage() {
               const columnTodos = filtered.filter((todo) => todo.status === status);
               const displayed = status === "done" && !showAllDone ? columnTodos.slice(0, 10) : columnTodos;
               return <BoardColumn key={status} status={status} count={columnTodos.length} disabled={loading || loadFailed}>
-                {loading ? <div className="space-y-3" aria-label="Aufgaben werden geladen">{[0, 1, 2].map((index) => <div key={index} className="h-32 animate-pulse rounded-lg border border-[var(--line)] bg-[var(--surface)]"/>)}</div> : displayed.map((todo) => <TaskCard key={todo.id} todo={todo} relation={relationName(todo)} assignee={assigneeName(todo)} busy={pending.includes(todo.id)} onOpen={() => setEditor(todo)} onStatusChange={(next) => void setStatus(todo.id, next)} onDelete={() => { setError(""); void remove(todo).catch((cause) => setError(cause instanceof Error ? cause.message : "Aufgabe konnte nicht gelöscht werden.")); }}/>)}
+                {loading ? <div className="space-y-3" aria-label="Aufgaben werden geladen">{[0, 1, 2].map((index) => <div key={index} className="h-32 animate-pulse rounded-lg border border-[var(--line)] bg-[var(--surface)]"/>)}</div> : displayed.map((todo) => <TaskCard key={todo.id} todo={todo} relation={relationName(todo)} assignee={assigneeName(todo)} busy={pending.includes(todo.id)} onOpen={() => setEditor(todo)} onPriorityChange={(priority) => void setPriority(todo.id, priority)} onStatusChange={(next) => void setStatus(todo.id, next)} onDelete={() => { setError(""); void remove(todo).catch((cause) => setError(cause instanceof Error ? cause.message : "Aufgabe konnte nicht gelöscht werden.")); }}/>)}
                 {!loading && !loadFailed && !columnTodos.length && <p className="py-10 text-center text-xs text-[var(--muted)]">{hasFilters ? "Keine passenden Aufgaben" : status === "done" ? "Noch nichts erledigt" : status === "in_progress" ? "Keine Aufgabe in Bearbeitung" : "Keine offenen Aufgaben"}</p>}
                 {status === "done" && columnTodos.length > 10 && <button onClick={() => setShowAllDone(!showAllDone)} className="action w-full text-xs">{showAllDone ? "Weniger anzeigen" : `${columnTodos.length - 10} weitere anzeigen`}</button>}
               </BoardColumn>;
@@ -194,6 +212,7 @@ function TaskSummary({ todo, relation, assignee }: { todo: Todo; relation?: stri
   const RelationIcon = todo.customerId ? Users : ContactRound;
   return <>
     <p className="break-words text-sm font-semibold leading-6 [overflow-wrap:anywhere]">{todo.title}</p>
+    <span className={`mt-2 flex items-center gap-1 text-xs font-semibold ${todo.priority === "high" ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}><Flag size={12}/>{priorityLabels[todo.priority ?? "normal"]}</span>
     {todo.notes && <p className="mt-2 line-clamp-2 break-words text-xs text-[var(--muted)] [overflow-wrap:anywhere]">{todo.notes}</p>}
     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
       {todo.dueDate && <span className={`flex items-center gap-1 ${overdue ? "font-semibold text-[var(--danger)]" : ""}`}><CalendarClock size={13}/>{todo.dueDate === todayKey() ? "Heute" : new Date(`${todo.dueDate}T12:00:00`).toLocaleDateString("de-CH")}{overdue && " · Überfällig"}</span>}
@@ -203,13 +222,14 @@ function TaskSummary({ todo, relation, assignee }: { todo: Todo; relation?: stri
   </>;
 }
 
-function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange, onDelete }: { todo: Todo; relation?: string; assignee: string; busy: boolean; onOpen: () => void; onStatusChange: (status: TodoStatus) => void; onDelete: () => void }) {
+function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange, onPriorityChange, onDelete }: { todo: Todo; relation?: string; assignee: string; busy: boolean; onOpen: () => void; onStatusChange: (status: TodoStatus) => void; onPriorityChange: (priority: TodoPriority) => void; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: todo.id, disabled: busy });
   return <article ref={setNodeRef} aria-busy={busy} className={`rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm ${isDragging ? "opacity-30" : ""}`}>
     <div className="flex items-start gap-1">
       <button onClick={onOpen} disabled={busy} className="min-w-0 flex-1 rounded text-left hover:text-[var(--primary)]" aria-label={`Aufgabe öffnen: ${todo.title}`}><TaskSummary todo={todo} relation={relation} assignee={assignee}/></button>
       <button ref={setActivatorNodeRef} {...attributes} {...listeners} disabled={busy} className="icon-button shrink-0 touch-none cursor-grab active:cursor-grabbing" title="Aufgabe verschieben" aria-label={`Aufgabe verschieben: ${todo.title}`}><GripVertical size={17}/></button>
     </div>
+    <label className="mt-3 block"><span className="sr-only">Priorität: {todo.title}</span><select value={todo.priority ?? "normal"} disabled={busy} onChange={(event) => onPriorityChange(event.target.value as TodoPriority)} className="field text-xs"><PriorityOptions/></select></label>
     <div className="mt-3 flex items-center gap-2 border-t border-[var(--line)] pt-2">
       <select value={todo.status} disabled={busy} onChange={(event) => onStatusChange(event.target.value as TodoStatus)} aria-label={`Status: ${todo.title}`} className="min-h-8 min-w-0 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--muted)]">{statusOrder.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
       <button type="button" onClick={onDelete} disabled={busy} className="icon-button shrink-0 text-[var(--danger)]" title="Aufgabe löschen" aria-label={`Aufgabe löschen: ${todo.title}`}><Trash2 size={16}/></button>
@@ -228,6 +248,7 @@ function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDe
   const [notes, setNotes] = useState(todo?.notes ?? "");
   const [dueDate, setDueDate] = useState(todo?.dueDate ?? "");
   const [status, setStatus] = useState<TodoStatus>(todo?.status ?? "not_started");
+  const [priority, setPriority] = useState<TodoPriority>(todo?.priority ?? "normal");
   const [assigneeId, setAssigneeId] = useState(todo?.assigneeId ?? "");
   const [link, setLink] = useState<LinkChoice>(todo?.customerId ? `customer:${todo.customerId}` : todo?.prospectId ? `prospect:${todo.prospectId}` : "");
   const [busy, setBusy] = useState(false);
@@ -239,7 +260,7 @@ function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDe
     if (busy || !title.trim()) return;
     setBusy(true); setError("");
     const [kind, id] = link.split(":");
-    try { await onSave({ title: title.trim(), notes: notes.trim(), status, dueDate: dueDate || undefined, customerId: kind === "customer" ? id : undefined, prospectId: kind === "prospect" ? id : undefined, assigneeId: assigneeId || undefined }); }
+    try { await onSave({ title: title.trim(), notes: notes.trim(), status, priority, dueDate: dueDate || undefined, customerId: kind === "customer" ? id : undefined, prospectId: kind === "prospect" ? id : undefined, assigneeId: assigneeId || undefined }); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Aufgabe konnte nicht gespeichert werden."); }
     finally { setBusy(false); }
   }
@@ -261,6 +282,7 @@ function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDe
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Aufgabe</span><input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} className="field"/></label>
         <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Status</span><select value={status} onChange={(event) => setStatus(event.target.value as TodoStatus)} className="field">{statusOrder.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
         <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Fällig am (optional)</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="field"/></label>
+        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Priorität</span><select value={priority} onChange={(event) => setPriority(event.target.value as TodoPriority)} className="field"><PriorityOptions/></select></label>
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich (optional)</span><select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)} className="field"><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}{assigneeId && !members.some((member) => member.user_id === assigneeId) && <option value={assigneeId} disabled>Mitglied nicht mehr verfügbar</option>}</select></label>
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Kunde / Prospect (optional)</span><select value={link} onChange={(event) => setLink(event.target.value as LinkChoice)} className="field"><LinkOptions customers={customers} prospects={prospects}/>{selectedLinkMissing && <option value={link}>Bestehender Bezug (nicht verfügbar)</option>}</select></label>
         <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Notizen (optional)</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="field resize-y"/></label>

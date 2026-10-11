@@ -3,12 +3,14 @@ export type ProspectStatus = "new" | "contacted" | "meeting" | "offer" | "won" |
 export type WorkspaceModule = "projects" | "ideas" | "tasks" | "offers" | "people" | "commissions" | "leads" | "operations";
 export type WorkspacePriority = "low" | "medium" | "high";
 export type TodoStatus = "not_started" | "in_progress" | "done";
+export type TodoPriority = "high" | "normal" | "low";
 
 export interface Todo {
     id: string;
     title: string;
     notes?: string;
     status: TodoStatus;
+    priority: TodoPriority;
     dueDate?: string;
     customerId?: string;
     prospectId?: string;

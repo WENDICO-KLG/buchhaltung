@@ -22,6 +22,12 @@ aushebeln. Fuer weitere Updates ausschliesslich die Migrationen verwenden.
 
 ## Bedienung
 
+Die Migration `supabase/migrations/20261011180000_todo_priority.sql` aktiviert
+Todo-Prioritaeten Hoch, Normal und Niedrig. Bestehende Aufgaben erhalten Normal.
+Prioritaeten sind im Formular und direkt auf der Karte aenderbar und filterbar.
+Offene Aufgaben werden je Spalte zuerst nach Ueberfaelligkeit, dann Prioritaet
+und Faelligkeit sortiert. Erledigte Aufgaben bleiben nach letzter Aenderung sortiert.
+
 Die Migration `supabase/migrations/20261011170000_dashboard_commissions.sql`
 ergaenzt datumsbezogene Provisionssummen fuer die Uebersicht. Das Ergebnis wird
 als Umsatz minus Ausgaben minus Provisionen inklusive Monatsbonus berechnet.

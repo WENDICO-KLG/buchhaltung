@@ -194,6 +194,13 @@ test("company migration, invitations, roles and tenant isolation", async () => {
     await login(owner);
     await db.query("update public.customers set commission_enabled = false where id = 'existing'");
     assert.equal(await scalar("select count(*)::int from public.commission_customers($1) where customer_id = 'existing'", [owner]),0);
+    await db.exec("reset role");
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261011180000_todo_priority.sql", import.meta.url), "utf8"));
+    await login(owner);
+    assert.equal(await scalar("select priority from public.todos where id = 'assigned'"), 'normal');
+    await db.query("update public.todos set priority = 'high' where id = 'assigned'");
+    assert.equal(await scalar("select priority from public.todos where id = 'assigned'"), 'high');
+    await assert.rejects(db.query("update public.todos set priority = 'urgent' where id = 'assigned'"));
   } finally {
     await db.close();
   }
