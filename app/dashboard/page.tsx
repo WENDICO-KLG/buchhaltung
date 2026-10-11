@@ -208,7 +208,7 @@ export default function Dashboard() {
 
     {foreignCurrencyCount > 0 && <p className="mt-3 text-xs text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
 
-    <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Kpi label="Umsatz (netto)" value={metrics.revenue} previous={previous?.revenue} comparisonLabel={comparisonLabel} loading={loading}
         hint={metrics.plannedRevenue > 0 ? `inkl. ${formatCurrency(metrics.plannedRevenue)} erwartet` : `davon ${formatCurrency(metrics.recurringRevenue)} wiederkehrend`}/>
       <Kpi label="Ausgaben" value={metrics.costs} previous={previous?.costs} comparisonLabel={comparisonLabel} loading={loading} inverse
@@ -216,8 +216,6 @@ export default function Dashboard() {
       <Kpi label="Provisionen" value={metrics.commissions} previous={previous?.commissions} comparisonLabel={comparisonLabel} loading={loading} inverse hint="10 % Grundprovision inkl. Monatsbonus"/>
       <Kpi label="Netto Gewinn" value={metrics.profit} previous={previous?.profit} comparisonLabel={comparisonLabel} loading={loading} emphasize
         hint={margin === undefined ? "Keine Einnahmen im Zeitraum" : `Nach Ausgaben und Provisionen · Marge ${margin}%`}/>
-      <Kpi label="Offene Forderungen" value={receivables.openAmount} loading={loading}
-        hint={receivables.openCount ? `${receivables.openCount} offen${receivables.overdueCount ? ` · ${receivables.overdueCount} überfällig` : ""} · Stand heute` : "Alles bezahlt · Stand heute"}/>
     </section>
 
     <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
