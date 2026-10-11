@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "test:company": "node --test tests/company.test.mjs"
   },
-  "keywords": ["buchhaltung", "wendico"],
+  "keywords": [
+    "buchhaltung",
+    "wendico"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",
@@ -19,6 +22,7 @@
     "@supabase/supabase-js": "^2.116.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.46.0",
+    "mathjs": "^15.2.0",
     "next": "^16.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

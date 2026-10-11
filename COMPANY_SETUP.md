@@ -38,6 +38,17 @@ Mitarbeiter/Leser sehen nur ihnen zugeteilte Kunden. Abschalten loescht die
 Provisionszuordnung; erneutes Aktivieren startet ohne Zuordnung. Zeitraumfilter
 verwenden das einmalige Zahlungsdatum; undatierte Betraege sind nur ohne Filter
 enthalten. Berechnungen sind Vorschauen, keine Auszahlung oder Lohnabrechnung.
+Der Rechner verwendet jetzt fest 10 % Grundprovision. Ab drei zugeteilten,
+provisionsfaehigen Kunden mit positivem Einmalbetrag im selben Monat bekommt
+der Mitarbeiter 50 % der gesamten Monatsprovision als Bonus (effektiv 15 %).
+Die Schwelle wird immer ueber den ganzen Monat bestimmt, auch wenn ein
+Teilzeitraum angezeigt wird. Monate und Mitarbeiter werden getrennt gezaehlt.
+Als Abschlussdatum gilt aktuell das gespeicherte einmalige Zahlungsdatum.
+Bei abweichendem Verkaufsabschlussdatum muss ein eigenes Datumsfeld ergaenzt
+werden. Alte kundenspezifische Prozentsaetze werden nicht mehr zur Berechnung
+verwendet; neue Zuordnungen speichern 10 %. Beim Entzug einer Zuordnung oder
+Abschalten eines Kunden wird die Vorschau neu berechnet; keine Auszahlungshistorie.
+
 Die Push-Edge-Function ebenfalls neu deployen, damit Seitenrechte beim Versand
 beruecksichtigt werden.
 
