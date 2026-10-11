@@ -123,7 +123,7 @@ export default function Dashboard() {
     return keys.map((key) => {
       const monthRange = rangeMode === "custom" ? { from: key === keys[0] ? range.from : `${key}-01`, to: key === keys[keys.length - 1] ? range.to : lastDayOfMonth(key) } : { from: `${key}-01`, to: lastDayOfMonth(key) };
       const values = computePeriod(monthRange, invoices, expenses, customers, commissions);
-      return { month: new Date(`${key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short", year: keys.length > 12 || rangeMode === "custom" ? "2-digit" : undefined }), Einnahmen: values.revenue, Ausgaben: values.costs, Provisionen: values.commissions, Ergebnis: values.profit };
+      return { month: new Date(`${key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short", year: keys.length > 12 || rangeMode === "custom" ? "2-digit" : undefined }), Einnahmen: values.revenue, Ausgaben: values.costs, Provisionen: values.commissions, "Netto Gewinn": values.profit };
     });
   }, [rangeMode, rangeMonth, range, invoices, expenses, customers, commissions]);
 
@@ -214,7 +214,7 @@ export default function Dashboard() {
       <Kpi label="Ausgaben" value={metrics.costs} previous={previous?.costs} comparisonLabel={comparisonLabel} loading={loading} inverse
         hint={metrics.plannedCosts > 0 ? `inkl. ${formatCurrency(metrics.plannedCosts)} geplant` : `davon ${formatCurrency(metrics.recurringCosts)} wiederkehrend`}/>
       <Kpi label="Provisionen" value={metrics.commissions} previous={previous?.commissions} comparisonLabel={comparisonLabel} loading={loading} inverse hint="10 % Grundprovision inkl. Monatsbonus"/>
-      <Kpi label="Ergebnis" value={metrics.profit} previous={previous?.profit} comparisonLabel={comparisonLabel} loading={loading} emphasize
+      <Kpi label="Netto Gewinn" value={metrics.profit} previous={previous?.profit} comparisonLabel={comparisonLabel} loading={loading} emphasize
         hint={margin === undefined ? "Keine Einnahmen im Zeitraum" : `Nach Ausgaben und Provisionen · Marge ${margin}%`}/>
       <Kpi label="Offene Forderungen" value={receivables.openAmount} loading={loading}
         hint={receivables.openCount ? `${receivables.openCount} offen${receivables.overdueCount ? ` · ${receivables.overdueCount} überfällig` : ""} · Stand heute` : "Alles bezahlt · Stand heute"}/>
@@ -228,7 +228,7 @@ export default function Dashboard() {
             <p className="text-xs text-[var(--muted)]">{rangeMode === "month" ? "Letzte 6 Monate" : "Pro Monat im Zeitraum"}</p>
           </div>
           <div className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
-            <Legend color="#3aa981" label="Einnahmen"/><Legend color="#f97066" label="Ausgaben"/><Legend color="#dba52a" label="Provisionen"/><Legend color="#4f8fd1" label="Ergebnis" line/>
+            <Legend color="#3aa981" label="Einnahmen"/><Legend color="#f97066" label="Ausgaben"/><Legend color="#dba52a" label="Provisionen"/><Legend color="#4f8fd1" label="Netto Gewinn" line/>
           </div>
         </div>
         <div className="mt-5 h-[280px]">
@@ -241,7 +241,7 @@ export default function Dashboard() {
               <Bar dataKey="Einnahmen" fill="#3aa981" radius={[4, 4, 0, 0]} maxBarSize={28}/>
               <Bar dataKey="Ausgaben" fill="#f97066" radius={[4, 4, 0, 0]} maxBarSize={28}/>
               <Bar dataKey="Provisionen" fill="#dba52a" radius={[4, 4, 0, 0]} maxBarSize={28}/>
-              <Line dataKey="Ergebnis" stroke="#4f8fd1" strokeWidth={2} dot={{ r: 3 }} type="monotone"/>
+              <Line dataKey="Netto Gewinn" stroke="#4f8fd1" strokeWidth={2} dot={{ r: 3 }} type="monotone"/>
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -299,8 +299,9 @@ export default function Dashboard() {
 function Kpi({ label, value, previous, comparisonLabel, hint, loading, inverse = false, emphasize = false }: { label: string; value: number; previous?: number; comparisonLabel?: string; hint: string; loading: boolean; inverse?: boolean; emphasize?: boolean }) {
   const delta = previous !== undefined && previous !== 0 ? (value - previous) / Math.abs(previous) * 100 : undefined;
   const good = delta !== undefined && (inverse ? delta <= 0 : delta >= 0);
-  const valueColor = emphasize ? value < 0 ? "text-[#d92d20]" : "text-[#12b76a]" : "text-[var(--ink)]";
-  return <div className="panel rounded-xl p-4 md:p-5">
+  const valueColor = emphasize && !loading && value !== 0 ? value < 0 ? "text-[#d92d20]" : "text-[#12b76a]" : "text-[var(--ink)]";
+  const borderColor = loading || value === 0 ? "var(--line)" : value < 0 ? "#d92d20" : "#12b76a";
+  return <div className="panel rounded-xl p-4 md:p-5" style={emphasize ? { borderWidth: 3, borderColor } : undefined}>
     <div className="flex items-center justify-between gap-2">
       <p className="text-xs font-semibold text-[var(--muted)]">{label}</p>
       {delta !== undefined && Math.abs(delta) >= 0.5 && <span title={`gegenüber ${comparisonLabel}`} className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold ${good ? "bg-[#d1fadf] text-[#05603a]" : "bg-[#fee4e2] text-[#b42318]"}`}>{delta >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(Math.round(delta))}%</span>}
