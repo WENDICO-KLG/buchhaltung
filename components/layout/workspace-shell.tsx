@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Calculator, ContactRound, FileArchive, ListTodo, LogOut, Menu, ReceiptText, Settings, Sun, Users } from "lucide-react";
+import { Building2, Calculator, ContactRound, FileArchive, LayoutDashboard, ListTodo, LogOut, Menu, ReceiptText, Settings, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { canAccessPage, getActiveCompany } from "@/lib/company";
@@ -12,6 +12,7 @@ import type { CompanyMembership } from "@/lib/company";
 import { NotificationCenter } from "@/components/layout/notification-center";
 
 const navigation = [
+  { label: "Übersicht", href: "/dashboard", icon: LayoutDashboard },
   { label: "To-Dos", href: "/todos", icon: ListTodo },
   { label: "Kunden", href: "/customers", icon: Users },
   { label: "Ausgaben", href: "/analytics", icon: ReceiptText },
@@ -72,7 +73,7 @@ export function WorkspaceShell({ children, active, title = "Wendico" }: { childr
 
   const initials = (user.email?.slice(0, 2) ?? "WE").toUpperCase();
   const permittedNavigation = navigation.filter(({ href }) => !company ? href === "/settings" : canAccessPage(company, href.slice(1)));
-  const activePage = active === "Übersicht" ? { href: "/dashboard" } : navigation.find(({ label }) => label === active);
+  const activePage = navigation.find(({ label }) => label === active);
   const denied = Boolean(company && activePage && !canAccessPage(company, activePage.href.slice(1)));
   const home = permittedNavigation[0]?.href ?? "/settings";
   const links = permittedNavigation.map(({ label, href, icon: Icon }) => <Link key={label} href={href} title={label} onClick={() => setMobileOpen(false)} className={`flex h-9 items-center justify-center gap-3 rounded-xl px-3 transition ${active === label ? "bg-[#153a71] text-[#65c6ff] blue-glow" : "text-[#7185a6] hover:bg-white/5 hover:text-white"}`}><Icon size={18} strokeWidth={1.8} /><span className="md:hidden">{label}</span></Link>);
