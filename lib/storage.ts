@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { currentCompanyId, getActiveCompany } from "@/lib/company";
 import { todayKey } from "@/lib/utils";
+import { validateSocialMediaOrder } from "@/lib/social-media";
+import type { SocialMediaOrder, SocialMediaOrderInput } from "@/lib/social-media";
 import type { CompanyProfile, Customer, Document, Expense, Invoice, MonthlyGoal, Prospect, Todo, TodoComment, WorkspaceFile, WorkspaceItem, WorkspaceModule } from "@/types";
 
 type InvoiceRow = { id: string; user_id: string; invoice_number: string; customer_name: string; customer_email?: string; customer_address?: string; issue_date: string; due_date: string; status: Invoice["status"]; currency: string; items: Invoice["items"]; notes?: string; paid_at?: string; covers_recurring?: boolean; created_at: string; updated_at: string };
@@ -17,6 +19,43 @@ function databaseError(error: { code?: string; message?: string; details?: strin
 }
 
 const newId = (kind: string) => `${kind}-${crypto.randomUUID()}`;
+
+type SocialMediaOrderRow = { id: string; title: string; post_url: string; service_date: string; amount: number | string; paid_at: string | null };
+const socialMediaOrderFromRow = (row: SocialMediaOrderRow): SocialMediaOrder => ({ id: row.id, title: row.title, postUrl: row.post_url, serviceDate: row.service_date, amount: Number(row.amount), paidAt: row.paid_at });
+function socialMediaError(error: { code?: string; message?: string }) {
+  return ["PGRST205", "42P01"].includes(error.code ?? "") ? new Error("Bitte zuerst die neue Social-Media-Migration in Supabase ausführen.") : databaseError(error);
+}
+export async function getSocialMediaOrders(): Promise<SocialMediaOrder[]> {
+  const companyId = await currentCompanyId();
+  const orders: SocialMediaOrder[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("social_media_orders").select("id,title,post_url,service_date,amount,paid_at").eq("user_id", companyId).order("service_date", { ascending: false }).order("id").range(offset, offset + 499);
+    if (error) throw socialMediaError(error);
+    orders.push(...((data ?? []) as SocialMediaOrderRow[]).map(socialMediaOrderFromRow));
+    if (!data || data.length < 500) return orders;
+  }
+}
+export async function saveSocialMediaOrder(input: SocialMediaOrderInput, id?: string): Promise<SocialMediaOrder> {
+  validateSocialMediaOrder(input);
+  const companyId = await currentCompanyId(true);
+  const row = { title: input.title.trim(), post_url: input.postUrl.trim(), service_date: input.serviceDate, amount: input.amount };
+  const query = id ? supabase.from("social_media_orders").update(row).eq("user_id", companyId).eq("id", id) : supabase.from("social_media_orders").insert({ ...row, user_id: companyId });
+  const { data, error } = await query.select("id,title,post_url,service_date,amount,paid_at").single();
+  if (error) throw socialMediaError(error);
+  return socialMediaOrderFromRow(data as SocialMediaOrderRow);
+}
+export async function setSocialMediaOrderPaid(id: string, paid: boolean): Promise<SocialMediaOrder> {
+  const companyId = await currentCompanyId(true, true);
+  const { data, error } = await supabase.from("social_media_orders").update({ paid_at: paid ? new Date().toISOString() : null }).eq("user_id", companyId).eq("id", id).select("id,title,post_url,service_date,amount,paid_at").single();
+  if (error) throw socialMediaError(error);
+  return socialMediaOrderFromRow(data as SocialMediaOrderRow);
+}
+export async function deleteSocialMediaOrder(id: string) {
+  const companyId = await currentCompanyId(true);
+  const { data, error } = await supabase.from("social_media_orders").delete().eq("user_id", companyId).eq("id", id).select("id").single();
+  if (error) throw socialMediaError(error);
+  return data.id as string;
+}
 
 const invoiceFromRow = (row: InvoiceRow): Invoice => ({ id: row.id, invoiceNumber: row.invoice_number, customerName: row.customer_name, customerEmail: row.customer_email, customerAddress: row.customer_address, issueDate: row.issue_date, dueDate: row.due_date, status: row.status, currency: row.currency, items: row.items ?? [], notes: row.notes, paidAt: row.paid_at, coversRecurring: row.covers_recurring ?? false, createdAt: row.created_at, updatedAt: row.updated_at });
 const invoiceToRow = (invoice: Invoice, userId: string): InvoiceRow => ({ id: invoice.id, user_id: userId, invoice_number: invoice.invoiceNumber, customer_name: invoice.customerName, customer_email: invoice.customerEmail, customer_address: invoice.customerAddress, issue_date: invoice.issueDate, due_date: invoice.dueDate, status: invoice.status, currency: invoice.currency, items: invoice.items, notes: invoice.notes, paid_at: invoice.paidAt, covers_recurring: invoice.coversRecurring ?? false, created_at: invoice.createdAt, updated_at: invoice.updatedAt });

@@ -22,6 +22,23 @@ aushebeln. Fuer weitere Updates ausschliesslich die Migrationen verwenden.
 
 ## Bedienung
 
+Die Migration `supabase/migrations/20261019100000_ayleen_social_media.sql`
+aktiviert die Seite **Ayleen Social Media** unter `/social-media`.
+Alle vorherigen Migrationen muessen bereits angewendet sein; anschliessend
+`npx supabase db push` ausfuehren oder die neue Migration im SQL Editor anwenden.
+Unter Einstellungen > Firma & Team Ayleen als Mitarbeiter einladen und die Seite
+**Ayleen Social Media** freigeben. Die neue Seite wird Mitarbeitern und Lesern
+nicht automatisch freigegeben; Inhaber und Administratoren haben Vollzugriff.
+Auftraege enthalten Bezeichnung, Post-Link, Leistungsdatum und Preis in CHF.
+Das Leistungsdatum bestimmt den Abrechnungsmonat. Die Monatsansicht zeigt
+Gesamtverguetung, bereits bezahlte Betraege und den offenen Auszahlungsbetrag;
+darunter stehen die Summen aller erfassten Monate.
+Nur Inhaber und Administratoren koennen Auftraege als bezahlt/offen markieren.
+Bezahlte Auftraege koennen Mitarbeiter nicht mehr bearbeiten oder loeschen.
+Leser haben ausschliesslich Lesezugriff. Die Zahlungsmarkierung bestaetigt eine
+manuell erfolgte Zahlung, loest aber keine Ueberweisung aus. Die Auftraege
+werden nicht automatisch als Ausgaben in die bestehende Finanzuebersicht gebucht.
+
 Die Migration `supabase/migrations/20261011180000_todo_priority.sql` aktiviert
 Todo-Prioritaeten Hoch, Normal und Niedrig. Bestehende Aufgaben erhalten Normal.
 Prioritaeten sind im Formular und direkt auf der Karte aenderbar und filterbar.

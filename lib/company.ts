@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export type CompanyRole = "owner" | "admin" | "member" | "viewer";
-export const companyPages = { dashboard: "Übersicht", todos: "To-Dos", analytics: "Ausgaben", cvs: "Belege", customers: "Kunden", prospects: "Prospects", profile: "Unternehmen", calculator: "Rechner" };
+export const companyPages = { dashboard: "Übersicht", todos: "To-Dos", analytics: "Ausgaben", cvs: "Belege", customers: "Kunden", prospects: "Prospects", profile: "Unternehmen", calculator: "Rechner", "social-media": "Ayleen Social Media" };
 export type CompanyPage = keyof typeof companyPages;
 export type CompanyMembership = { company_id: string; company_name: string; role: CompanyRole; allowed_pages?: CompanyPage[] };
 export type CompanyMember = { user_id: string; email: string; role: CompanyRole; display_name?: string | null; allowed_pages?: CompanyPage[] };

@@ -56,6 +56,8 @@ select option, select optgroup { background: var(--surface); color: var(--ink); 
 .todo-page, .todo-dialog { letter-spacing: 0; }
 .todo-page .field.pl-9 { padding-left: 2.25rem; }
 .todo-page .primary, .todo-dialog .primary { color: var(--paper); }
+.social-media-page .primary { color: var(--paper); }
+.social-media-page button:disabled, .social-media-page input:disabled { cursor: not-allowed; opacity: .6; }
 .todo-page button:disabled, .todo-page select:disabled, .todo-dialog button:disabled { cursor: not-allowed; opacity: .6; }
 .todo-dialog::backdrop { background: rgba(0, 0, 0, .6); }
 .google-login { width: 100%; border: 1px solid #d0d5dd; border-radius: .5rem; background: #fff !important; padding: .75rem 1rem; color: #202124 !important; font-size: .9375rem; font-weight: 650; cursor: pointer; box-shadow: 0 1px 2px rgba(16,24,40,.05); }

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Calculator, ContactRound, FileArchive, LayoutDashboard, ListTodo, LogOut, Menu, ReceiptText, Settings, Sun, Users } from "lucide-react";
+import { Building2, Calculator, ContactRound, FileArchive, LayoutDashboard, ListTodo, LogOut, Menu, ReceiptText, Settings, Share2, Sun, Users } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { canAccessPage, getActiveCompany } from "@/lib/company";
@@ -17,6 +17,7 @@ const navigation = [
   { label: "Kunden", href: "/customers", icon: Users },
   { label: "Ausgaben", href: "/analytics", icon: ReceiptText },
   { label: "Rechner", href: "/calculator", icon: Calculator },
+  { label: "Ayleen Social Media", href: "/social-media", icon: Share2 },
   { label: "Prospects", href: "/prospects", icon: ContactRound },
   { label: "Belege", href: "/cvs", icon: FileArchive },
   { label: "Unternehmen", href: "/profile", icon: Building2 },
