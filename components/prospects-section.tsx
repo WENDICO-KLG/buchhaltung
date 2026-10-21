@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { ContactRound, GraduationCap, Lightbulb, ScrollText } from "lucide-react";
+import { ContactRound, FileSpreadsheet, GraduationCap, Lightbulb, ScrollText } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const tabs = [
   { href: "/prospects", label: "Pipeline", icon: ContactRound },
   { href: "/prospects/training", label: "Training", icon: GraduationCap },
   { href: "/prospects/script", label: "Spickzettel", icon: ScrollText },
+  { href: "/prospects/sheet", label: "Tabelle", icon: FileSpreadsheet },
 ] as const;
 
+// The bottom line is an inset shadow so the active underline covers it without overflowing the scroll container.
 export function ProspectsTabs({ current }: { current: (typeof tabs)[number]["href"] }) {
-  return <nav aria-label="Bereiche im Vertrieb" className="mb-7 flex gap-1 overflow-x-auto border-b border-[var(--line)]">
-    {tabs.map(({ href, label, icon: Icon }) => <Link key={href} href={href} aria-current={href === current ? "page" : undefined} className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${href === current ? "border-[var(--primary)] text-[var(--ink)]" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)]"}`}><Icon size={16} className={href === current ? "text-[var(--primary)]" : undefined}/>{label}</Link>)}
+  return <nav aria-label="Bereiche im Vertrieb" className="mb-7 flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_var(--line)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    {tabs.map(({ href, label, icon: Icon }) => <Link key={href} href={href} aria-current={href === current ? "page" : undefined} className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${href === current ? "border-[var(--primary)] text-[var(--ink)]" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)]"}`}><Icon size={16} className={`hidden sm:block ${href === current ? "text-[var(--primary)]" : ""}`}/>{label}</Link>)}
   </nav>;
 }
 

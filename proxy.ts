@@ -5,7 +5,7 @@ export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin;
   const development = process.env.NODE_ENV === "development";
-  const policy = `default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${supabaseOrigin}; font-src 'self'; connect-src 'self' ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")};${development ? "" : " upgrade-insecure-requests;"}`;
+  const policy = `default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https://docs.google.com; object-src 'none'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${supabaseOrigin}; font-src 'self'; connect-src 'self' ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")};${development ? "" : " upgrade-insecure-requests;"}`;
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
   headers.set("Content-Security-Policy", policy);

@@ -63,7 +63,9 @@ Leser bleiben ohne Schreibrechte. Bestehende Mitgliedschaften behalten zunaechst
 alle aktuellen Seiten; Freigaben danach gezielt einschraenken.
 
 Fuer Sales-Mitarbeiter genuegt die Freigabe "Prospects": Sie umfasst die Pipeline,
-das Einwand-Training (`/prospects/training`) und den Spickzettel (`/prospects/script`).
+das Einwand-Training (`/prospects/training`), den Spickzettel (`/prospects/script`)
+und die eingebettete Google-Tabelle (`/prospects/sheet`). Die Tabelle sieht nur, wer im
+Browser mit einem Google-Konto angemeldet ist, das in Google Drive Zugriff darauf hat.
 Wer eine nicht freigegebene Seite oeffnet, landet automatisch auf der ersten
 freigegebenen Seite. Die Texte fuer Training und Spickzettel stehen in
 `lib/sales-training.ts`; der Trainingsfortschritt wird pro Geraet im Browser gespeichert.
