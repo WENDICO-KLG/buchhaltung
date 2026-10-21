@@ -58,6 +58,8 @@ export function WorkspaceShell({ children, active, title = "Wendico" }: { childr
     getActiveCompany().then((company) => {
       if (!mounted) return;
       if (!company && active !== "Einstellungen") { router.replace("/settings"); return; }
+      const page = navigation.find(({ label }) => label === active);
+      if (company && page && !canAccessPage(company, page.href.slice(1))) { router.replace(navigation.find(({ href }) => canAccessPage(company, href.slice(1)))?.href ?? "/settings"); return; }
       setCompany(company);
       setCompanyReady(true);
     }).catch((error: unknown) => {

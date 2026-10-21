@@ -62,6 +62,12 @@ die deren Kennzahlen benoetigen. Seitenrechte ersetzen nicht die Rollenrechte:
 Leser bleiben ohne Schreibrechte. Bestehende Mitgliedschaften behalten zunaechst
 alle aktuellen Seiten; Freigaben danach gezielt einschraenken.
 
+Fuer Sales-Mitarbeiter genuegt die Freigabe "Prospects": Sie umfasst die Pipeline,
+das Einwand-Training (`/prospects/training`) und den Spickzettel (`/prospects/script`).
+Wer eine nicht freigegebene Seite oeffnet, landet automatisch auf der ersten
+freigegebenen Seite. Die Texte fuer Training und Spickzettel stehen in
+`lib/sales-training.ts`; der Trainingsfortschritt wird pro Geraet im Browser gespeichert.
+
 Auf Kundenkarten aktivieren Inhaber/Administratoren den Provisionsschalter.
 Im Rechner werden ausschliesslich aktivierte Kunden angezeigt. Dort werden
 Mitarbeiter und Prozentsatz zugeordnet; Provision gilt nur fuer einmalige Einnahmen.
