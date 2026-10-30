@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { socialMediaMonthSummary, validateSocialMediaOrder } from "../lib/social-media.ts";
+import { paidSocialMediaExpensesInRange, socialMediaMonthSummary, validateSocialMediaOrder } from "../lib/social-media.ts";
 
 const input = { title: "Instagram Reel", postUrl: "https://www.instagram.com/p/test/", serviceDate: "2026-10-19", amount: 125.50 };
 
@@ -13,6 +13,15 @@ test("social media totals separate service months and paid amounts without round
   ];
   assert.deepEqual(socialMediaMonthSummary(orders, "2026-10"), { count: 2, total: 0.30, paid: 0.20, open: 0.10 });
   assert.deepEqual(socialMediaMonthSummary(orders, "2026-12"), { count: 0, total: 0, paid: 0, open: 0 });
+});
+
+test("paid social media orders count as expenses on their payment date", () => {
+  const orders = [
+    { ...input, id: "in-range", amount: 0.10, paidAt: "2026-10-31T23:59:59Z" },
+    { ...input, id: "next-month", amount: 0.20, paidAt: "2026-11-01T00:00:00Z" },
+    { ...input, id: "unpaid", amount: 100, paidAt: null },
+  ];
+  assert.equal(paidSocialMediaExpensesInRange(orders, "2026-10-01", "2026-10-31"), 0.1);
 });
 
 test("social media inputs require valid dates, safe links and finite cent amounts", () => {

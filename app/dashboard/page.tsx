@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Pencil, Target, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, saveMonthlyGoal } from "@/lib/storage";
+import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, getSocialMediaOrders, saveMonthlyGoal } from "@/lib/storage";
 import { getDashboardCommissions } from "@/lib/company";
 import type { DashboardCommission } from "@/lib/company";
+import { paidSocialMediaExpensesInRange } from "@/lib/social-media";
+import type { SocialMediaOrder } from "@/lib/social-media";
 import { addMonths, customerOneTimeRevenue, customerRecurringRevenue, formatCurrency, invoiceNet, invoiceStatusLabels, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
 import type { Customer, Expense, Invoice, InvoiceStatus, MonthlyGoal } from "@/types";
 
@@ -33,7 +35,7 @@ const statusStyles: Record<InvoiceStatus, string> = {
   cancelled: "bg-[var(--surface-soft)] text-[var(--muted)] line-through",
 };
 
-function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], customers: Customer[], commissionRows: DashboardCommission[]) {
+function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], customers: Customer[], commissionRows: DashboardCommission[], socialMediaOrders: SocialMediaOrder[]) {
   const months = monthKeysBetween(range.from, range.to);
   const invoiceRevenue = invoices.filter((invoice) => countsAsRevenue(invoice, range)).reduce((sum, invoice) => sum + invoiceNet(invoice.items), 0);
   const oneTimeRevenue = customers.reduce((sum, customer) => sum + customerOneTimeRevenue(customer, range.from, range.to), 0);
@@ -41,7 +43,7 @@ function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], c
   const recurringCostsByMonth = months.map((key) => expenses.reduce((sum, expense) => sum + recurringExpenseMonthlyAmount(expense, key), 0));
   const recurringRevenue = recurringByMonth.reduce((sum, value) => sum + value, 0);
   const recurringCosts = recurringCostsByMonth.reduce((sum, value) => sum + value, 0);
-  const oneTimeCosts = expenses.filter((expense) => !expense.isRecurring && inRange(expense.expenseDate, range)).reduce((sum, expense) => sum + expense.amount, 0);
+  const oneTimeCosts = expenses.filter((expense) => !expense.isRecurring && inRange(expense.expenseDate, range)).reduce((sum, expense) => sum + expense.amount, 0) + paidSocialMediaExpensesInRange(socialMediaOrders, range.from, range.to);
   const plannedRevenue = months.reduce((sum, key, index) => key > currentMonth ? sum + recurringByMonth[index] : sum, 0);
   const plannedCosts = months.reduce((sum, key, index) => key > currentMonth ? sum + recurringCostsByMonth[index] : sum, 0);
   const revenue = invoiceRevenue + oneTimeRevenue + recurringRevenue;
@@ -53,6 +55,7 @@ function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], c
 export default function Dashboard() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [socialMediaOrders, setSocialMediaOrders] = useState<SocialMediaOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [commissions, setCommissions] = useState<DashboardCommission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,8 +75,8 @@ export default function Dashboard() {
   const goalMonth = rangeMode === "month" ? rangeMonth : currentMonth;
 
   useEffect(() => {
-    Promise.all([getInvoices(), getExpenses(), getCustomers(), getDashboardCommissions()])
-      .then(([invoiceData, expenseData, customerData, commissionData]) => { setInvoices(invoiceData); setExpenses(expenseData); setCustomers(customerData); setCommissions(commissionData); })
+    Promise.all([getInvoices(), getExpenses(), getCustomers(), getDashboardCommissions(), getSocialMediaOrders()])
+      .then(([invoiceData, expenseData, customerData, commissionData, socialMediaData]) => { setInvoices(invoiceData); setExpenses(expenseData); setCustomers(customerData); setCommissions(commissionData); setSocialMediaOrders(socialMediaData); })
       .catch(() => setError("Finanzdaten konnten nicht geladen werden."))
       .finally(() => setLoading(false));
   }, []);
@@ -106,9 +109,9 @@ export default function Dashboard() {
   const periodLabel = rangeMode === "month" ? monthLabel(rangeMonth) : rangeMode === "year" ? `Jahr ${rangeYear}` : `${dateLabel(range.from)} – ${dateLabel(range.to)}`;
   const comparisonLabel = rangeMode === "month" ? "Vormonat" : "Vorjahr";
 
-  const metrics = useMemo(() => computePeriod(range, invoices, expenses, customers, commissions), [range, invoices, expenses, customers, commissions]);
-  const previous = useMemo(() => previousRange && computePeriod(previousRange, invoices, expenses, customers, commissions), [previousRange, invoices, expenses, customers, commissions]);
-  const goalMetrics = useMemo(() => computePeriod({ from: `${goalMonth}-01`, to: lastDayOfMonth(goalMonth) }, invoices, expenses, customers, commissions), [goalMonth, invoices, expenses, customers, commissions]);
+  const metrics = useMemo(() => computePeriod(range, invoices, expenses, customers, commissions, socialMediaOrders), [range, invoices, expenses, customers, commissions, socialMediaOrders]);
+  const previous = useMemo(() => previousRange && computePeriod(previousRange, invoices, expenses, customers, commissions, socialMediaOrders), [previousRange, invoices, expenses, customers, commissions, socialMediaOrders]);
+  const goalMetrics = useMemo(() => computePeriod({ from: `${goalMonth}-01`, to: lastDayOfMonth(goalMonth) }, invoices, expenses, customers, commissions, socialMediaOrders), [goalMonth, invoices, expenses, customers, commissions, socialMediaOrders]);
 
   const receivables = useMemo(() => {
     const open = invoices.filter(({ status }) => status === "sent" || status === "overdue");
@@ -122,10 +125,10 @@ export default function Dashboard() {
     const keys = rangeMode === "month" ? Array.from({ length: 6 }, (_, index) => addMonths(rangeMonth, index - 5)) : monthKeysBetween(range.from, range.to);
     return keys.map((key) => {
       const monthRange = rangeMode === "custom" ? { from: key === keys[0] ? range.from : `${key}-01`, to: key === keys[keys.length - 1] ? range.to : lastDayOfMonth(key) } : { from: `${key}-01`, to: lastDayOfMonth(key) };
-      const values = computePeriod(monthRange, invoices, expenses, customers, commissions);
+      const values = computePeriod(monthRange, invoices, expenses, customers, commissions, socialMediaOrders);
       return { month: new Date(`${key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short", year: keys.length > 12 || rangeMode === "custom" ? "2-digit" : undefined }), Einnahmen: values.revenue, Ausgaben: values.costs, Provisionen: values.commissions, "Netto Gewinn": values.profit };
     });
-  }, [rangeMode, rangeMonth, range, invoices, expenses, customers, commissions]);
+  }, [rangeMode, rangeMonth, range, invoices, expenses, customers, commissions, socialMediaOrders]);
 
   const revenueByCustomer = useMemo(() => {
     const totals = new Map<string, number>();
@@ -147,8 +150,10 @@ export default function Dashboard() {
       const value = expense.isRecurring ? months.reduce((sum, key) => sum + recurringExpenseMonthlyAmount(expense, key), 0) : inRange(expense.expenseDate, range) ? expense.amount : 0;
       if (value > 0) totals.set(expense.vendor, (totals.get(expense.vendor) ?? 0) + value);
     }
+    const socialMediaCosts = paidSocialMediaExpensesInRange(socialMediaOrders, range.from, range.to);
+    if (socialMediaCosts > 0) totals.set("Ayleen Social Media", (totals.get("Ayleen Social Media") ?? 0) + socialMediaCosts);
     return [...totals].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
-  }, [range, expenses]);
+  }, [range, expenses, socialMediaOrders]);
 
   const recent = useMemo(() => [...invoices].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5), [invoices]);
 

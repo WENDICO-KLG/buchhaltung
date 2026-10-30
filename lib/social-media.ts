@@ -24,3 +24,11 @@ export function socialMediaMonthSummary(orders: SocialMediaOrder[], month: strin
   const paidCents = entries.reduce((sum, order) => sum + (order.paidAt ? Math.round(order.amount * 100) : 0), 0);
   return { count: entries.length, total: totalCents / 100, paid: paidCents / 100, open: (totalCents - paidCents) / 100 };
 }
+
+export function paidSocialMediaExpensesInRange(orders: SocialMediaOrder[], from: string, to: string) {
+  const cents = orders.reduce((sum, order) => {
+    const paidDate = order.paidAt?.slice(0, 10);
+    return paidDate && paidDate >= from && paidDate <= to ? sum + Math.round(order.amount * 100) : sum;
+  }, 0);
+  return cents / 100;
+}
