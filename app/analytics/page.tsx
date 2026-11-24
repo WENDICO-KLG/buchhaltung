@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Pencil, Plus, ReceiptText, Repeat, Trash2, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Pencil, Plus, ReceiptText, Repeat, Trash2 } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { CountUp } from "@/components/ui/count-up";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Guilloche } from "@/components/ui/guilloche";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Stat } from "@/components/ui/stat";
 import { createExpense, deleteExpense, getCustomers, getExpenses, updateExpense } from "@/lib/storage";
-import { formatCurrency, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
+import { addMonths, formatCurrency, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
 import type { Customer, Expense, RecurringInterval } from "@/types";
 
 type FilterMode = "month" | "range" | "customer";
@@ -18,6 +24,8 @@ export default function ExpensesPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string>();
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const formRef = useRef<HTMLFormElement>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>("month");
   const [filterMonth, setFilterMonth] = useState(today.slice(0, 7));
   const [filterFrom, setFilterFrom] = useState(`${new Date().getFullYear()}-01-01`);
@@ -27,8 +35,11 @@ export default function ExpensesPage() {
   useEffect(() => {
     Promise.all([getExpenses(), getCustomers()])
       .then(([expenseData, customerData]) => { setExpenses(expenseData); setCustomers(customerData); })
-      .catch((cause) => setError(cause instanceof Error ? cause.message : "Ausgaben konnten nicht geladen werden."));
+      .catch((cause) => setError(cause instanceof Error ? cause.message : "Ausgaben konnten nicht geladen werden."))
+      .finally(() => setLoading(false));
   }, []);
+  // The form sits above the list, so bring it into view when a row further down is edited.
+  useEffect(() => { if (open) formRef.current?.scrollIntoView({ block: "nearest" }); }, [open, editingId]);
 
   const customerNames = useMemo(() => new Map(customers.map((customer) => [customer.id, customer.companyName])), [customers]);
   const filteredExpenses = useMemo(() => expenses.filter((expense) => {
@@ -83,15 +94,101 @@ export default function ExpensesPage() {
     return { ...current, [key]: value };
   });
 
-  return <WorkspaceShell active="Ausgaben" title="Wendico / Ausgaben">
-    <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase tracking-[.18em] text-[#56c8ff]">Betriebsausgaben</p><h1 className="mt-3 text-3xl font-semibold text-white">Ausgaben</h1><p className="mt-2 text-sm text-[#8292ae]">Kosten nach Zeitraum und Kunde überblicken.</p></div><button onClick={() => { reset(); setOpen(true); }} className="primary flex items-center gap-2"><Plus size={16}/>Ausgabe erfassen</button></div>
-    {error && <div className="mt-5 rounded-xl border border-[#6e3340] bg-[#24131e] px-4 py-3 text-sm text-[#ffaaa0]">{error}</div>}
-    <section className="panel mt-6 grid gap-4 rounded-2xl p-4"><div className="flex items-center gap-2 text-sm font-semibold text-white"><CalendarRange size={16} className="text-[#56c8ff]"/>Ausgaben filtern</div><div className="flex flex-wrap gap-2"><button onClick={() => setFilterMode("month")} className={filterMode === "month" ? "filter-active" : "filter"}>Monat</button><button onClick={() => setFilterMode("range")} className={filterMode === "range" ? "filter-active" : "filter"}>Zeitraum</button><button onClick={() => setFilterMode("customer")} className={filterMode === "customer" ? "filter-active" : "filter"}>Kunde</button></div><div className="grid gap-3 sm:grid-cols-3">{filterMode === "month" && <Field label="Monat" type="month" value={filterMonth} onChange={setFilterMonth}/>} {filterMode === "range" && <><Field label="Von" type="date" value={filterFrom} onChange={setFilterFrom}/><Field label="Bis" type="date" value={filterTo} onChange={setFilterTo}/></>}<label><span className="mb-2 block text-xs text-[#8292ae]">Kunde</span><select value={filterCustomer} onChange={(event) => setFilterCustomer(event.target.value)} className="field"><option value="">Alle Kunden</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label></div></section>
-    <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:max-w-lg"><Summary label={filterMode === "customer" ? "Ausgaben bis heute" : "Ausgaben im Zeitraum"} value={total} icon={ReceiptText}/><Summary label="Wiederkehrend im Monat" value={recurringMonthlyTotal} icon={Repeat}/></div>
-    {open && <form onSubmit={submit} className="panel mt-5 grid gap-4 rounded-2xl p-5 sm:grid-cols-2 lg:grid-cols-4"><Field label="Lieferant" value={form.vendor} required onChange={(value) => setFormValue("vendor", value)}/><Field label="Beschreibung" value={form.description} required onChange={(value) => setFormValue("description", value)}/><Field label="Datum" type="date" value={form.expenseDate} disabled={form.isRecurring} onChange={(value) => setFormValue("expenseDate", value)}/><Field label="Betrag in CHF" type="number" value={form.amount} required onChange={(value) => setFormValue("amount", value)}/><label><span className="mb-2 block text-xs text-[#8292ae]">Kunde</span><select value={form.customerId} onChange={(event) => setFormValue("customerId", event.target.value)} className="field"><option value="">Kein Kunde</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label><label className="flex items-center gap-2 self-end pb-2"><input type="checkbox" checked={form.isRecurring} onChange={(event) => setFormValue("isRecurring", event.target.checked)}/><span className="text-xs text-[#8292ae]">Wiederkehrend</span></label>{form.isRecurring && <label><span className="mb-2 block text-xs text-[#8292ae]">Intervall</span><select value={form.recurringInterval} onChange={(event) => setFormValue("recurringInterval", event.target.value as RecurringInterval)} className="field"><option value="monthly">Monatlich</option><option value="yearly">Jährlich</option></select></label>}{form.isRecurring && <Field label="Wiederkehrend von" type="date" value={form.recurringStartDate} required onChange={(value) => setFormValue("recurringStartDate", value)}/>} {form.isRecurring && <Field label="Wiederkehrend bis" type="date" value={form.recurringEndDate} onChange={(value) => setFormValue("recurringEndDate", value)}/>}<div className="flex gap-2 sm:col-span-2 lg:col-span-4"><button className="primary">{editingId ? "Änderungen speichern" : "Speichern"}</button><button type="button" onClick={reset} className="action">Abbrechen</button></div></form>}
-    <div className="panel mt-5 overflow-hidden rounded-2xl">{filteredExpenses.length ? <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-left text-sm"><thead className="text-xs text-[#7185a6]"><tr><th className="px-6 py-4">Datum</th><th>Lieferant</th><th>Beschreibung</th><th>Kunde</th><th className="text-right">Betrag</th><th className="px-6 text-right">Aktionen</th></tr></thead><tbody>{filteredExpenses.map((expense) => <tr key={expense.id} className="border-t border-white/5"><td className="px-6 py-4 text-[#8292ae]">{new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("de-CH")}</td><td className="font-semibold text-white">{expense.vendor}</td><td className="max-w-[24rem] text-[#8292ae]">{expense.description}{expense.isRecurring && <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[#153a71] px-2 py-0.5 text-xs text-[#8edaff]"><Repeat size={11}/>{expense.recurringInterval === "yearly" ? "jährlich" : "monatlich"}</span>}</td><td>{customerNames.get(expense.customerId ?? "") ? <span className="inline-flex max-w-[12rem] items-center gap-1 truncate rounded-full bg-[#153a71] px-2 py-1 text-xs text-[#8edaff]"><Users size={12}/>{customerNames.get(expense.customerId ?? "")}</span> : <span className="text-xs text-[#7185a6]">Nicht zugeordnet</span>}</td><td className="text-right font-semibold text-white">{formatCurrency(expense.amount, expense.currency)}</td><td className="px-6"><div className="flex justify-end gap-1"><button onClick={() => edit(expense)} aria-label="Ausgabe bearbeiten" className="icon-button"><Pencil size={15}/></button><button onClick={() => remove(expense.id)} aria-label="Ausgabe löschen" className="icon-button text-[#ff8f85]"><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div> : <div className="py-16 text-center"><ReceiptText className="mx-auto text-[#526b8c]"/><p className="mt-3 text-sm text-[#8292ae]">Keine Ausgaben für diesen Filter.</p></div>}</div>
-  </WorkspaceShell>;
+  const thisMonth = today.slice(0, 7);
+  const chartEnd = filterMonth <= thisMonth && filterMonth > addMonths(thisMonth, -12) ? thisMonth : filterMonth || thisMonth;
+  const chart = useMemo(() => monthKeysBetween(addMonths(chartEnd, -11), chartEnd).map((key) => expenses.reduce((sum, expense) => {
+    if (filterCustomer && expense.customerId !== filterCustomer) return sum;
+    if (expense.isRecurring) sum.recurring += recurringExpenseMonthlyAmount(expense, key);
+    else if (expense.expenseDate.startsWith(key)) sum.single += expense.amount;
+    return sum;
+  }, { key, recurring: 0, single: 0 })), [chartEnd, expenses, filterCustomer]);
+
+  return <WorkspaceShell active="Ausgaben" title="Wendico / Ausgaben"><div className="page-enter">
+    <PageHeader title="Ausgaben" subtitle="Kosten nach Zeitraum und Kunde überblicken." actions={<button onClick={() => { reset(); setOpen(true); }} className="primary w-full sm:w-auto"><Plus size={17}/>Ausgabe erfassen</button>}/>
+    {error && <div role="alert" className="mt-6 rounded-xl border border-[color-mix(in_srgb,var(--coral)_40%,transparent)] bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)]">{error}</div>}
+
+    {open && <form ref={formRef} onSubmit={submit} className="raised mt-6 scroll-mt-24 scroll-mb-24 rounded-2xl p-5 md:p-7">
+      <h2 className="text-lg font-semibold">{editingId ? "Ausgabe bearbeiten" : "Neue Ausgabe"}</h2>
+      <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+        <Field label="Lieferant" value={form.vendor} required onChange={(value) => setFormValue("vendor", value)}/>
+        <Field label="Beschreibung" value={form.description} required onChange={(value) => setFormValue("description", value)}/>
+        <Field label="Datum" type="date" value={form.expenseDate} disabled={form.isRecurring} onChange={(value) => setFormValue("expenseDate", value)}/>
+        <Field label="Betrag in CHF" type="number" value={form.amount} required onChange={(value) => setFormValue("amount", value)}/>
+        <label className="min-w-0"><FieldLabel>Kunde</FieldLabel><select value={form.customerId} onChange={(event) => setFormValue("customerId", event.target.value)} className="field"><option value="">Kein Kunde</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label>
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 self-end text-sm"><input type="checkbox" className="h-5 w-5 flex-none accent-[var(--gold)]" checked={form.isRecurring} onChange={(event) => setFormValue("isRecurring", event.target.checked)}/>Wiederkehrend</label>
+        {form.isRecurring && <label className="min-w-0"><FieldLabel>Intervall</FieldLabel><select value={form.recurringInterval} onChange={(event) => setFormValue("recurringInterval", event.target.value as RecurringInterval)} className="field"><option value="monthly">Monatlich</option><option value="yearly">Jährlich</option></select></label>}
+        {form.isRecurring && <Field label="Wiederkehrend von" type="date" value={form.recurringStartDate} required onChange={(value) => setFormValue("recurringStartDate", value)}/>}
+        {form.isRecurring && <Field label="Wiederkehrend bis" type="date" value={form.recurringEndDate} onChange={(value) => setFormValue("recurringEndDate", value)}/>}
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2"><button className="primary">{editingId ? "Änderungen speichern" : "Speichern"}</button><button type="button" onClick={reset} className="action">Abbrechen</button></div>
+    </form>}
+
+    <section aria-label="Ausgaben filtern" className="mt-7 flex flex-col gap-4 lg:flex-row lg:items-end">
+      <div role="group" aria-label="Zeitraum" className="flex w-full gap-1 rounded-xl border border-[var(--line)] p-1 lg:w-auto">{([["month", "Monat"], ["range", "Zeitraum"], ["customer", "Kunde"]] as const).map(([value, label]) => <button key={value} aria-pressed={filterMode === value} onClick={() => setFilterMode(value)} className={`${filterMode === value ? "filter-active" : "filter"} flex-1 lg:flex-none`}>{label}</button>)}</div>
+      <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2 lg:flex lg:justify-end [&>label]:lg:w-52">
+        {filterMode === "month" && <Field label="Monat" type="month" value={filterMonth} onChange={setFilterMonth}/>}
+        {filterMode === "range" && <><Field label="Von" type="date" value={filterFrom} onChange={setFilterFrom}/><Field label="Bis" type="date" value={filterTo} onChange={setFilterTo}/></>}
+        <label className="min-w-0"><FieldLabel>Kunde</FieldLabel><select value={filterCustomer} onChange={(event) => setFilterCustomer(event.target.value)} className="field"><option value="">Alle Kunden</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label>
+      </div>
+    </section>
+
+    <section className="panel relative mt-5 overflow-hidden rounded-2xl" aria-busy={loading}>
+      <Guilloche className="absolute -left-64 -top-52 w-[34rem] opacity-20 md:opacity-30"/>
+      <div className="relative grid gap-8 p-6 md:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-12">
+        <div className="flex min-w-0 flex-col justify-between gap-8">
+          <Stat size="lg" label={filterMode === "customer" ? "Ausgaben bis heute" : "Ausgaben im Zeitraum"} value={loading ? "–" : <CountUp value={total} format={formatCurrency}/>} hint={loading ? undefined : `${filteredExpenses.length} ${filteredExpenses.length === 1 ? "Position" : "Positionen"}`}/>
+          <div className="border-t border-[var(--line)] pt-5"><Stat label="Wiederkehrend im Monat" value={loading ? "–" : formatCurrency(recurringMonthlyTotal)}/></div>
+        </div>
+        <MonthBars data={chart} selected={filterMode === "month" ? filterMonth : undefined} onSelect={(key) => { setFilterMode("month"); setFilterMonth(key); }}/>
+      </div>
+    </section>
+
+    <section aria-label="Ausgabenliste" className="panel mt-5 overflow-hidden rounded-2xl">
+      {loading ? <div className="grid gap-4 p-6">{[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-10"/>)}</div> : filteredExpenses.length ? <>
+        <table className="hidden w-full text-left text-sm lg:table"><thead className="text-[13px] text-[var(--muted)]"><tr className="[&>th]:font-medium"><th className="py-4 pl-7 pr-4">Datum</th><th className="px-4">Lieferant</th><th className="px-4">Beschreibung</th><th className="px-4">Kunde</th><th className="px-4 text-right">Betrag</th><th className="pl-4 pr-6 text-right"><span className="sr-only">Aktionen</span></th></tr></thead>
+          <tbody>{filteredExpenses.map((expense) => <tr key={expense.id} className="border-t border-[var(--line)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)]">
+            <td className="whitespace-nowrap py-4 pl-7 pr-4 text-[var(--muted)]">{dateLabel(expense)}</td>
+            <td className="px-4 font-semibold">{expense.vendor}</td>
+            <td className="max-w-[22rem] px-4 text-[var(--muted)]">{expense.description}{expense.isRecurring && <Interval expense={expense}/>}</td>
+            <td className="max-w-[14rem] px-4">{customerNames.get(expense.customerId ?? "") ?? <span className="text-[var(--muted)]">Nicht zugeordnet</span>}</td>
+            <td className="money whitespace-nowrap px-4 text-right text-base font-semibold">{formatCurrency(expense.amount, expense.currency)}</td>
+            <td className="pl-4 pr-6"><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></td>
+          </tr>)}</tbody></table>
+        <ul className="divide-y divide-[var(--line)] lg:hidden">{filteredExpenses.map((expense) => <li key={expense.id} className="px-5 pb-2 pt-4">
+          <div className="flex items-baseline justify-between gap-4"><p className="min-w-0 break-words font-semibold">{expense.vendor}</p><p className="money flex-none font-semibold">{formatCurrency(expense.amount, expense.currency)}</p></div>
+          <p className="mt-1 text-sm text-[var(--muted)]">{expense.description}</p>
+          <div className="mt-1 flex items-center justify-between gap-3"><p className="min-w-0 text-[13px] text-[var(--muted)]">{dateLabel(expense)}{expense.isRecurring && <Interval expense={expense}/>}<span className="block truncate">{customerNames.get(expense.customerId ?? "") ?? "Nicht zugeordnet"}</span></p><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></div>
+        </li>)}</ul>
+      </> : <EmptyState icon={ReceiptText} title="Keine Ausgaben für diesen Filter."/>}
+    </section>
+  </div></WorkspaceShell>;
 }
 
-function Summary({ label, value, icon: Icon }: { label: string; value: number; icon: typeof ReceiptText }) { return <section className="panel rounded-2xl p-5"><div className="flex items-center justify-between"><p className="text-xs text-[#8292ae]">{label}</p><Icon size={16} className="text-[#56c8ff]"/></div><p className="mt-3 text-2xl font-semibold text-white">{formatCurrency(value)}</p></section>; }
-function Field({ label, value, onChange, type = "text", required = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; disabled?: boolean }) { return <label><span className="mb-2 block text-xs text-[#8292ae]">{label}</span><input required={required} disabled={disabled} type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? 0 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="field disabled:cursor-not-allowed disabled:bg-[var(--surface-soft)] disabled:text-[var(--muted)] disabled:opacity-60"/></label>; }
+function dateLabel(expense: Expense) { return new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("de-CH"); }
+
+function Interval({ expense }: { expense: Expense }) { return <span className="ml-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-[var(--ink)]"><Repeat aria-hidden size={13} strokeWidth={1.7}/>{expense.recurringInterval === "yearly" ? "jährlich" : "monatlich"}</span>; }
+
+function Actions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
+  return <div className="flex flex-none justify-end gap-1"><button onClick={onEdit} aria-label="Ausgabe bearbeiten" title="Ausgabe bearbeiten" className="icon-button"><Pencil size={16} strokeWidth={1.7}/></button><button onClick={onRemove} aria-label="Ausgabe löschen" title="Ausgabe löschen" className="icon-button hover:text-[var(--coral)]"><Trash2 size={16} strokeWidth={1.7}/></button></div>;
+}
+
+const single = "color-mix(in srgb, var(--chart-2) 48%, transparent)";
+
+function MonthBars({ data, selected, onSelect }: { data: { key: string; recurring: number; single: number }[]; selected?: string; onSelect: (key: string) => void }) {
+  const max = Math.max(...data.map((entry) => entry.recurring + entry.single));
+  return <div className="flex min-w-0 flex-col justify-end">
+    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 text-[13px] text-[var(--muted)]"><h2 className="text-sm">Monatsverlauf</h2><p className="flex gap-4"><span className="inline-flex items-center gap-2"><i aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: "var(--chart-2)" }}/>Wiederkehrend</span><span className="inline-flex items-center gap-2"><i aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: single }}/>Einmalig</span></p></div>
+    <div className="mt-4 flex gap-1">{data.map((entry, index) => {
+      const value = entry.recurring + entry.single;
+      const name = new Date(`${entry.key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "long", year: "numeric" });
+      const active = entry.key === selected;
+      return <button key={entry.key} type="button" onClick={() => onSelect(entry.key)} aria-pressed={active} aria-label={`${name}: ${formatCurrency(value)}`} title={`${name}: ${formatCurrency(value)}`} className={`group min-w-0 flex-1 flex-col rounded-lg px-1 pb-1 pt-2 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)] ${index < 6 ? "hidden sm:flex" : "flex"}`}>
+        <span aria-hidden className="flex h-40 w-full flex-col justify-end border-b border-[var(--line)]"><span className={`mx-auto flex w-full max-w-7 origin-bottom flex-col gap-0.5 overflow-hidden rounded-t transition-opacity ${!selected || active ? "" : "opacity-70 group-hover:opacity-90"}`} style={{ height: max > 0 ? `${value / max * 100}%` : 0 }}>{entry.single > 0 && <span style={{ flexGrow: entry.single, background: single }}/>}{entry.recurring > 0 && <span style={{ flexGrow: entry.recurring, background: "var(--chart-2)" }}/>}</span></span>
+        <span aria-hidden className={`mt-2 w-full truncate text-center text-xs ${active ? "font-semibold text-[var(--ink)]" : "text-[var(--muted)]"}`}>{new Date(`${entry.key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short" }).replace(".", "").slice(0, 3)}</span>
+      </button>;
+    })}</div>
+  </div>;
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) { return <span className="mb-2 block text-[13px] text-[var(--muted)]">{children}</span>; }
+function Field({ label, value, onChange, type = "text", required = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; disabled?: boolean }) { return <label className="min-w-0"><FieldLabel>{label}</FieldLabel><input required={required} disabled={disabled} type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? 0 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="field min-w-0 disabled:cursor-not-allowed disabled:bg-[var(--surface-soft)] disabled:text-[var(--muted)] disabled:opacity-60"/></label>; }
