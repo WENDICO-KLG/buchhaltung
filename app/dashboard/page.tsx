@@ -1,39 +1,36 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Pencil, Target, X } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, getSocialMediaOrders, saveMonthlyGoal } from "@/lib/storage";
-import { getDashboardCommissions } from "@/lib/company";
+import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, getProspects, getSocialMediaOrders, saveMonthlyGoal } from "@/lib/storage";
+import { GoalPanel, type GoalForm } from "@/components/dashboard/goal-panel";
+import { Hero } from "@/components/dashboard/hero";
+import { MonthChart } from "@/components/dashboard/month-chart";
+import { PeriodControls } from "@/components/dashboard/period-controls";
+import { Pipeline } from "@/components/dashboard/pipeline";
+import { Ranking } from "@/components/dashboard/ranking";
+import { Receivables } from "@/components/dashboard/receivables";
+import { RecentInvoices } from "@/components/dashboard/recent-invoices";
+import { dateLabel, monthLabel, Plate, type RangeMode } from "@/components/dashboard/shared";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { canAccessPage, getActiveCompany, getDashboardCommissions } from "@/lib/company";
 import type { DashboardCommission } from "@/lib/company";
 import { paidSocialMediaExpensesInRange } from "@/lib/social-media";
 import type { SocialMediaOrder } from "@/lib/social-media";
-import { addMonths, customerOneTimeRevenue, customerRecurringRevenue, formatCurrency, invoiceNet, invoiceStatusLabels, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
-import type { Customer, Expense, Invoice, InvoiceStatus, MonthlyGoal } from "@/types";
+import { addMonths, customerOneTimeRevenue, customerRecurringRevenue, invoiceNet, invoiceTotal, lastDayOfMonth, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
+import type { Customer, Expense, Invoice, MonthlyGoal, Prospect } from "@/types";
 
-type RangeMode = "month" | "year" | "custom";
 type Range = { from: string; to: string };
 
 const today = todayKey();
 const currentMonth = today.slice(0, 7);
-const monthLabel = (month: string, format: "long" | "short" = "long") => new Date(`${month}-01T12:00:00`).toLocaleDateString("de-CH", { month: format, year: "numeric" });
-const dateLabel = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString("de-CH");
-const compactCurrency = (value: number) => new Intl.NumberFormat("de-CH", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const inRange = (date: string, range: Range) => date >= range.from && date <= range.to;
 const paidDate = (invoice: Invoice) => invoice.paidAt ?? invoice.issueDate;
 const isOverdue = (invoice: Invoice) => invoice.status === "overdue" || (invoice.status === "sent" && invoice.dueDate < today);
 // Recurring-covering invoices are already counted via the customer's recurring revenue; other currencies can't be summed into CHF.
 const countsAsRevenue = (invoice: Invoice, range: Range) => invoice.status === "paid" && !invoice.coversRecurring && invoice.currency === "CHF" && inRange(paidDate(invoice), range);
-
-const statusStyles: Record<InvoiceStatus, string> = {
-  draft: "bg-[var(--surface-soft)] text-[var(--muted)]",
-  sent: "bg-[var(--accent)] text-[var(--primary)]",
-  paid: "bg-[#d1fadf] text-[#05603a]",
-  overdue: "bg-[#fee4e2] text-[#b42318]",
-  cancelled: "bg-[var(--surface-soft)] text-[var(--muted)] line-through",
-};
 
 function computePeriod(range: Range, invoices: Invoice[], expenses: Expense[], customers: Customer[], commissionRows: DashboardCommission[], socialMediaOrders: SocialMediaOrder[]) {
   const months = monthKeysBetween(range.from, range.to);
@@ -59,6 +56,8 @@ export default function Dashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [commissions, setCommissions] = useState<DashboardCommission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [prospects, setProspects] = useState<Prospect[]>();
   const [error, setError] = useState("");
 
   const [rangeMode, setRangeMode] = useState<RangeMode>("month");
@@ -67,9 +66,10 @@ export default function Dashboard() {
   const [customFrom, setCustomFrom] = useState(`${today.slice(0, 4)}-01-01`);
   const [customTo, setCustomTo] = useState(today);
 
+  const [goalLoad, setGoalLoad] = useState({ month: "", failed: false });
   const [goal, setGoal] = useState<MonthlyGoal>();
   const [editingGoal, setEditingGoal] = useState(false);
-  const [goalForm, setGoalForm] = useState({ revenueTarget: "", expenseBudget: "", notes: "" });
+  const [goalForm, setGoalForm] = useState<GoalForm>({ revenueTarget: "", expenseBudget: "", notes: "" });
   const [saving, setSaving] = useState(false);
 
   const goalMonth = rangeMode === "month" ? rangeMonth : currentMonth;
@@ -77,8 +77,18 @@ export default function Dashboard() {
   useEffect(() => {
     Promise.all([getInvoices(), getExpenses(), getCustomers(), getDashboardCommissions(), getSocialMediaOrders()])
       .then(([invoiceData, expenseData, customerData, commissionData, socialMediaData]) => { setInvoices(invoiceData); setExpenses(expenseData); setCustomers(customerData); setCommissions(commissionData); setSocialMediaOrders(socialMediaData); })
-      .catch(() => setError("Finanzdaten konnten nicht geladen werden."))
+      .catch(() => { setLoadFailed(true); setError("Finanzdaten konnten nicht geladen werden."); })
       .finally(() => setLoading(false));
+  }, []);
+
+  // Optional extra: the pipeline never blocks or fails the finance figures.
+  useEffect(() => {
+    let cancelled = false;
+    getActiveCompany()
+      .then((company) => company && canAccessPage(company, "prospects") ? getProspects() : undefined)
+      .then((data) => { if (!cancelled) setProspects(data); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -87,10 +97,11 @@ export default function Dashboard() {
       .then((data) => {
         if (cancelled) return;
         setGoal(data);
+        setGoalLoad({ month: goalMonth, failed: false });
         setEditingGoal(false);
         setGoalForm({ revenueTarget: data?.revenueTarget.toString() ?? "", expenseBudget: data?.expenseBudget.toString() ?? "", notes: data?.notes ?? "" });
       })
-      .catch(() => { if (!cancelled) setError("Monatsziel konnte nicht geladen werden."); });
+      .catch(() => { if (cancelled) return; setGoal(undefined); setEditingGoal(false); setGoalLoad({ month: goalMonth, failed: true }); setError("Monatsziel konnte nicht geladen werden."); });
     return () => { cancelled = true; };
   }, [goalMonth]);
 
@@ -118,6 +129,8 @@ export default function Dashboard() {
     const overdue = open.filter(isOverdue);
     return { openCount: open.length, openAmount: open.filter((invoice) => invoice.currency === "CHF").reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0), overdueCount: overdue.length, overdueAmount: overdue.filter((invoice) => invoice.currency === "CHF").reduce((sum, invoice) => sum + invoiceTotal(invoice.items), 0) };
   }, [invoices]);
+
+  const overdueInvoices = useMemo(() => invoices.filter((invoice) => (invoice.status === "sent" || invoice.status === "overdue") && isOverdue(invoice)).sort((a, b) => a.dueDate.localeCompare(b.dueDate)), [invoices]);
 
   const foreignCurrencyCount = useMemo(() => invoices.filter((invoice) => invoice.status === "paid" && invoice.currency !== "CHF" && inRange(paidDate(invoice), range)).length, [invoices, range]);
 
@@ -179,179 +192,31 @@ export default function Dashboard() {
   const margin = metrics.revenue > 0 ? Math.round(metrics.profit / metrics.revenue * 100) : undefined;
 
   return <WorkspaceShell active="Übersicht" title="Wendico / Übersicht"><div className="page-enter">
-    {error && <div role="alert" className="mb-6 rounded-lg border border-[#fda29b] bg-[#fee4e2] px-4 py-3 text-sm text-[#b42318]">{error}</div>}
+    {error && <div role="alert" className="mb-6 flex items-center gap-3 rounded-xl border border-[color-mix(in_srgb,var(--coral)_40%,transparent)] bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)]"><CircleAlert aria-hidden size={18} className="flex-none"/>{error}</div>}
 
-    <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[.14em] text-[var(--primary)]">Finanzen</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--ink)]">Übersicht</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">{periodLabel}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 rounded-lg bg-[var(--surface-soft)] p-1" role="tablist" aria-label="Zeitraum">
-          {(["month", "year", "custom"] as const).map((mode) => <button key={mode} role="tab" aria-selected={rangeMode === mode} onClick={() => setRangeMode(mode)} className={rangeMode === mode ? "filter-active" : "filter"}>{mode === "month" ? "Monat" : mode === "year" ? "Jahr" : "Zeitraum"}</button>)}
+    <PageHeader title="Übersicht" subtitle={periodLabel} actions={<PeriodControls mode={rangeMode} onMode={setRangeMode} month={rangeMonth} onMonth={setRangeMonth} year={rangeYear} from={customFrom} onFrom={setCustomFrom} to={customTo} onTo={setCustomTo} onShift={shiftPeriod}
+      onToday={(rangeMode === "month" && rangeMonth !== currentMonth) || (rangeMode === "year" && rangeYear !== Number(today.slice(0, 4))) ? () => { setRangeMonth(currentMonth); setRangeYear(Number(today.slice(0, 4))); } : undefined}/>}/>
+
+    <div className="mt-7 grid grid-cols-1 gap-5 md:gap-6">
+      {loadFailed ? <Plate><EmptyState icon={CircleAlert} title="Keine Zahlen verfügbar" text="Die Finanzdaten konnten nicht geladen werden." action={<button onClick={() => window.location.reload()} className="action">Neu laden</button>}/></Plate> : <>
+        <div className="grid grid-cols-1 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+          <Hero metrics={metrics} previous={previous} comparisonLabel={comparisonLabel} loading={loading} margin={margin} periodLabel={periodLabel}/>
+          <GoalPanel month={goalMonth} goal={goal} revenue={goalMetrics.revenue} costs={goalMetrics.costs} loading={loading || goalLoad.month !== goalMonth} failed={goalLoad.failed} editing={editingGoal} onEditing={setEditingGoal} form={goalForm} onForm={setGoalForm} saving={saving} onSubmit={submitGoal}/>
         </div>
-        {rangeMode !== "custom" ? <div className="flex items-center rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-          <button onClick={() => shiftPeriod(-1)} aria-label="Vorheriger Zeitraum" className="icon-button h-10 w-10"><ChevronLeft size={16}/></button>
-          {rangeMode === "month"
-            ? <input type="month" value={rangeMonth} onChange={(event) => event.target.value && setRangeMonth(event.target.value)} aria-label="Monat" className="bg-transparent px-1 text-sm font-semibold text-[var(--ink)] outline-none"/>
-            : <span className="min-w-16 text-center text-sm font-semibold text-[var(--ink)]">{rangeYear}</span>}
-          <button onClick={() => shiftPeriod(1)} aria-label="Nächster Zeitraum" className="icon-button h-10 w-10"><ChevronRight size={16}/></button>
-        </div> : <div className="flex items-center gap-2">
-          <input type="date" value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} aria-label="Von" className="field w-auto"/>
-          <span className="text-xs text-[var(--muted)]">bis</span>
-          <input type="date" value={customTo} onChange={(event) => setCustomTo(event.target.value)} aria-label="Bis" className="field w-auto"/>
-        </div>}
-        {((rangeMode === "month" && rangeMonth !== currentMonth) || (rangeMode === "year" && rangeYear !== Number(today.slice(0, 4)))) && <button onClick={() => { setRangeMonth(currentMonth); setRangeYear(Number(today.slice(0, 4))); }} className="action">Heute</button>}
-      </div>
-    </header>
-
-    {receivables.overdueCount > 0 && <div className="mt-6 flex items-center gap-3 rounded-lg border border-[#f79009] bg-[#fffaeb] px-4 py-3 text-sm text-[#93370d]">
-      <CircleAlert size={17} className="flex-none"/>
-      <span className="flex-1"><strong>{receivables.overdueCount} überfällige Rechnung{receivables.overdueCount === 1 ? "" : "en"}</strong> über {formatCurrency(receivables.overdueAmount)} – jetzt nachfassen.</span>
-    </div>}
-
-    {foreignCurrencyCount > 0 && <p className="mt-3 text-xs text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
-
-    <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Kpi label="Umsatz (netto)" value={metrics.revenue} previous={previous?.revenue} comparisonLabel={comparisonLabel} loading={loading}
-        hint={metrics.plannedRevenue > 0 ? `inkl. ${formatCurrency(metrics.plannedRevenue)} erwartet` : `davon ${formatCurrency(metrics.recurringRevenue)} wiederkehrend`}/>
-      <Kpi label="Ausgaben" value={metrics.costs} previous={previous?.costs} comparisonLabel={comparisonLabel} loading={loading} inverse
-        hint={metrics.plannedCosts > 0 ? `inkl. ${formatCurrency(metrics.plannedCosts)} geplant` : `davon ${formatCurrency(metrics.recurringCosts)} wiederkehrend`}/>
-      <Kpi label="Provisionen" value={metrics.commissions} previous={previous?.commissions} comparisonLabel={comparisonLabel} loading={loading} inverse hint="10 % Grundprovision inkl. Monatsbonus"/>
-      <Kpi label="Netto Gewinn" value={metrics.profit} previous={previous?.profit} comparisonLabel={comparisonLabel} loading={loading} emphasize
-        hint={margin === undefined ? "Keine Einnahmen im Zeitraum" : `Nach Ausgaben und Provisionen · Marge ${margin}%`}/>
-    </section>
-
-    <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-      <section className="panel rounded-xl p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--ink)]">Einnahmen & Abzüge</h2>
-            <p className="text-xs text-[var(--muted)]">{rangeMode === "month" ? "Letzte 6 Monate" : "Pro Monat im Zeitraum"}</p>
-          </div>
-          <div className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
-            <Legend color="#3aa981" label="Einnahmen"/><Legend color="#f97066" label="Ausgaben"/><Legend color="#dba52a" label="Provisionen"/><Legend color="#4f8fd1" label="Netto Gewinn" line/>
-          </div>
+        {foreignCurrencyCount > 0 && <p className="-mt-1 text-sm text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
+        <div className="grid grid-cols-1 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+          <div className="grid min-w-0 grid-cols-1 max-xl:order-2"><MonthChart data={chartData} subtitle={rangeMode === "month" ? "Letzte 6 Monate" : "Pro Monat im Zeitraum"} loading={loading}/></div>
+          <Receivables totals={receivables} overdue={overdueInvoices} today={today} loading={loading}/>
         </div>
-        <div className="mt-5 h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} barGap={2}>
-              <CartesianGrid vertical={false}/>
-              <XAxis dataKey="month" tickLine={false} axisLine={false}/>
-              <YAxis tickFormatter={compactCurrency} tickLine={false} axisLine={false} width={48}/>
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} cursor={{ fill: "var(--surface-soft)" }} contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)" }}/>
-              <Bar dataKey="Einnahmen" fill="#3aa981" radius={[4, 4, 0, 0]} maxBarSize={28}/>
-              <Bar dataKey="Ausgaben" fill="#f97066" radius={[4, 4, 0, 0]} maxBarSize={28}/>
-              <Bar dataKey="Provisionen" fill="#dba52a" radius={[4, 4, 0, 0]} maxBarSize={28}/>
-              <Line dataKey="Netto Gewinn" stroke="#4f8fd1" strokeWidth={2} dot={{ r: 3 }} type="monotone"/>
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
-      <section className="panel flex flex-col rounded-xl p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="notification-icon"><Target size={18}/></span>
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--ink)]">Monatsziel</h2>
-              <p className="text-xs text-[var(--muted)]">{monthLabel(goalMonth)}</p>
-            </div>
-          </div>
-          {goal && !editingGoal && <button onClick={() => setEditingGoal(true)} aria-label="Ziele bearbeiten" className="icon-button"><Pencil size={15}/></button>}
-        </div>
-        {editingGoal ? <form onSubmit={submitGoal} className="page-enter mt-5 grid gap-3">
-          <GoalField label="Umsatzziel" value={goalForm.revenueTarget} onChange={(value) => setGoalForm({ ...goalForm, revenueTarget: value })}/>
-          <GoalField label="Ausgabenbudget" value={goalForm.expenseBudget} onChange={(value) => setGoalForm({ ...goalForm, expenseBudget: value })}/>
-          <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Notiz</span><input value={goalForm.notes} onChange={(event) => setGoalForm({ ...goalForm, notes: event.target.value })} className="field"/></label>
-          <div className="flex gap-2"><button disabled={saving} className="primary">{saving ? "Speichert..." : "Speichern"}</button><button type="button" onClick={() => setEditingGoal(false)} className="action"><X size={15}/>Abbrechen</button></div>
-        </form> : goal ? <div className="mt-5 grid gap-3">
-          <GoalProgress label="Umsatz" current={goalMetrics.revenue} target={goal.revenueTarget}/>
-          <GoalProgress label="Ausgaben" current={goalMetrics.costs} target={goal.expenseBudget} inverse/>
-          {goal.notes && <p className="text-xs leading-5 text-[var(--muted)]">{goal.notes}</p>}
-        </div> : <button onClick={() => setEditingGoal(true)} className="mt-5 flex-1 rounded-lg border border-dashed border-[var(--line)] py-8 text-sm font-semibold text-[var(--primary)] hover:border-[var(--primary)]">Ziel für {monthLabel(goalMonth)} festlegen</button>}
-      </section>
-    </div>
-
-    <div className="mt-5 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-      <Breakdown title="Einnahmen nach Kunde" subtitle={periodLabel} rows={revenueByCustomer} color="#3aa981" empty="Keine Einnahmen im Zeitraum." href="/customers"/>
-      <Breakdown title="Ausgaben nach Posten" subtitle={periodLabel} rows={costsByVendor} color="#f97066" empty="Keine Ausgaben im Zeitraum." href="/analytics"/>
-      <section className="panel rounded-xl p-5 lg:col-span-2 xl:col-span-1">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[var(--ink)]">Letzte Rechnungen</h2>
-        </div>
-        <ul className="mt-4 divide-y divide-[var(--line)]">
-          {recent.map((invoice) => { const status: InvoiceStatus = isOverdue(invoice) ? "overdue" : invoice.status; return <li key={invoice.id}><div className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[var(--ink)]">{invoice.customerName}</p>
-              <p className="mt-0.5 text-xs text-[var(--muted)]">{invoice.invoiceNumber} · fällig {dateLabel(invoice.dueDate)}</p>
-            </div>
-            <div className="flex flex-none flex-col items-end gap-1">
-              <span className="text-sm font-semibold tabular-nums text-[var(--ink)]">{formatCurrency(invoiceTotal(invoice.items), invoice.currency)}</span>
-              <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusStyles[status]}`}>{invoiceStatusLabels[status]}</span>
-            </div>
-          </div></li>; })}
-          {!recent.length && <li className="py-10 text-center text-sm text-[var(--muted)]">{loading ? "Lädt..." : "Noch keine Rechnungen."}</li>}
-        </ul>
-      </section>
+      </>}
+      {prospects && <Pipeline prospects={prospects} month={currentMonth}/>}
+      {!loadFailed && <div className="grid grid-cols-1 items-start gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+        <Plate className="grid h-full grid-cols-1 gap-9 lg:grid-cols-2 lg:gap-0 lg:[&>:first-child]:border-r lg:[&>:first-child]:border-[var(--line)] lg:[&>:first-child]:pr-7 lg:[&>:last-child]:pl-7">
+          <Ranking title="Einnahmen nach Kunde" subtitle={periodLabel} rows={revenueByCustomer} kind="income" empty="Keine Einnahmen im Zeitraum." href="/customers" loading={loading}/>
+          <Ranking title="Ausgaben nach Posten" subtitle={periodLabel} rows={costsByVendor} kind="cost" empty="Keine Ausgaben im Zeitraum." href="/analytics" loading={loading}/>
+        </Plate>
+        <RecentInvoices invoices={recent} isOverdue={isOverdue} loading={loading}/>
+      </div>}
     </div>
   </div></WorkspaceShell>;
-}
-
-function Kpi({ label, value, previous, comparisonLabel, hint, loading, inverse = false, emphasize = false }: { label: string; value: number; previous?: number; comparisonLabel?: string; hint: string; loading: boolean; inverse?: boolean; emphasize?: boolean }) {
-  const delta = previous !== undefined && previous !== 0 ? (value - previous) / Math.abs(previous) * 100 : undefined;
-  const good = delta !== undefined && (inverse ? delta <= 0 : delta >= 0);
-  const valueColor = emphasize && !loading && value !== 0 ? value < 0 ? "text-[#d92d20]" : "text-[#12b76a]" : "text-[var(--ink)]";
-  const borderColor = loading || value === 0 ? "var(--line)" : value < 0 ? "#d92d20" : "#12b76a";
-  return <div className="panel rounded-xl p-4 md:p-5" style={emphasize ? { borderWidth: 3, borderColor } : undefined}>
-    <div className="flex items-center justify-between gap-2">
-      <p className="text-xs font-semibold text-[var(--muted)]">{label}</p>
-      {delta !== undefined && Math.abs(delta) >= 0.5 && <span title={`gegenüber ${comparisonLabel}`} className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold ${good ? "bg-[#d1fadf] text-[#05603a]" : "bg-[#fee4e2] text-[#b42318]"}`}>{delta >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(Math.round(delta))}%</span>}
-    </div>
-    <p className={`mt-3 text-2xl font-semibold tabular-nums ${valueColor} ${loading ? "animate-pulse opacity-40" : ""}`}>{formatCurrency(value)}</p>
-    <p className="mt-1 truncate text-xs text-[var(--muted)]">{hint}{delta !== undefined && Math.abs(delta) >= 0.5 ? ` · ggü. ${comparisonLabel}` : ""}</p>
-  </div>;
-}
-
-function Breakdown({ title, subtitle, rows, color, empty, href }: { title: string; subtitle: string; rows: { label: string; value: number }[]; color: string; empty: string; href: string }) {
-  const visible = rows.slice(0, 6);
-  const rest = rows.slice(6).reduce((sum, row) => sum + row.value, 0);
-  const max = Math.max(...rows.map((row) => row.value), 1);
-  return <section className="panel rounded-xl p-5">
-    <div className="flex items-start justify-between gap-3">
-      <div><h2 className="text-sm font-semibold text-[var(--ink)]">{title}</h2><p className="text-xs text-[var(--muted)]">{subtitle}</p></div>
-      <Link href={href} className="text-xs font-semibold text-[var(--primary)]">Details</Link>
-    </div>
-    <ul className="mt-4 space-y-3">
-      {visible.map((row) => <li key={row.label}>
-        <div className="flex items-baseline justify-between gap-3 text-sm"><span className="truncate text-[var(--ink)]">{row.label}</span><span className="flex-none font-semibold tabular-nums text-[var(--ink)]">{formatCurrency(row.value)}</span></div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-soft)]"><div className="h-full rounded-full" style={{ width: `${row.value / max * 100}%`, background: color }}/></div>
-      </li>)}
-      {rest > 0 && <li className="flex justify-between text-xs text-[var(--muted)]"><span>{rows.length - 6} weitere</span><span className="tabular-nums">{formatCurrency(rest)}</span></li>}
-      {!rows.length && <li className="py-8 text-center text-sm text-[var(--muted)]">{empty}</li>}
-    </ul>
-  </section>;
-}
-
-function Legend({ color, label, line = false }: { color: string; label: string; line?: boolean }) {
-  return <span className="flex items-center gap-1.5"><span className={line ? "h-0.5 w-3 rounded" : "h-2.5 w-2.5 rounded-sm"} style={{ background: color }}/>{label}</span>;
-}
-
-function GoalField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">{label} (CHF)</span><input type="number" min="0" step="100" value={value} onChange={(event) => onChange(event.target.value)} className="field"/></label>;
-}
-
-function GoalProgress({ label, current, target, inverse = false }: { label: string; current: number; target: number; inverse?: boolean }) {
-  const percentage = target > 0 ? Math.round(current / target * 100) : 0;
-  const healthy = inverse ? current <= target : current >= target;
-  const barColor = inverse ? current > target ? "bg-[#d92d20]" : "bg-[#3aa981]" : healthy ? "bg-[#3aa981]" : "bg-[var(--primary)]";
-  return <div className="rounded-lg bg-[var(--surface-soft)] p-3.5">
-    <div className="flex items-baseline justify-between gap-3">
-      <p className="text-xs font-semibold text-[var(--muted)]">{label}</p>
-      <span className={`text-xs font-semibold ${healthy ? "text-[#12b76a]" : inverse ? "text-[#d92d20]" : "text-[var(--primary)]"}`}>{target > 0 ? `${percentage}%` : "kein Ziel"}</span>
-    </div>
-    <p className="mt-1 text-sm text-[var(--ink)]"><span className="font-semibold tabular-nums">{formatCurrency(current)}</span><span className="text-[var(--muted)]"> / {formatCurrency(target)}</span></p>
-    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--line)]"><div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(percentage, 100)}%` }}/></div>
-  </div>;
 }
