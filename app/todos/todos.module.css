@@ -1,0 +1,32 @@
+.board { display: grid; grid-template-columns: repeat(3, minmax(86%, 1fr)); gap: 1rem; min-width: 0; }
+@media (min-width: 640px) { .board { grid-template-columns: repeat(3, minmax(19rem, 1fr)); } }
+.viewport { position: relative; scroll-snap-type: x proximity; scroll-padding-inline: 1rem; scroll-behavior: smooth; scrollbar-width: none; }
+.viewport::-webkit-scrollbar { display: none; }
+.viewport > .board > * { scroll-snap-align: start; }
+/* Snapping would fight the automatic scrolling while a card is being dragged. */
+.dragging { scroll-snap-type: none; scroll-behavior: auto; }
+@media (min-width: 640px) { .viewport { scroll-snap-type: none; } }
+
+.column { transition: border-color .2s var(--ease-out), background-color .2s var(--ease-out); }
+.over { border-color: var(--gold); background-image: linear-gradient(var(--gold-soft), var(--gold-soft)); }
+.card { border: 1px solid var(--line); background: var(--surface); box-shadow: inset 0 1px 0 var(--plate-edge); transition: transform .2s var(--ease-out), border-color .2s var(--ease-out), box-shadow .2s var(--ease-out), opacity .16s var(--ease-out); }
+.card:hover { transform: translateY(-2px); border-color: var(--hairline); box-shadow: inset 0 1px 0 var(--plate-edge), var(--shadow-plate); }
+.lifted { opacity: .3; }
+.lifted:hover { transform: none; }
+.ghost { border: 1px solid var(--gold); background: var(--surface); box-shadow: var(--shadow-overlay); }
+
+/* Quiet selects inside a card: text until you reach for them. */
+.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: .5rem; background-color: transparent; padding: 0 1.45rem 0 .5rem !important; color: var(--muted); font-size: .875rem; font-weight: 500; background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50% !important; background-size: 4px 4px !important; transition: color .16s var(--ease-out), background-color .16s var(--ease-out); text-overflow: ellipsis; }
+.card select.quiet:hover { background-color: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
+.card select.strong { color: var(--ink); font-weight: 600; }
+@media (pointer: coarse) { .card select.quiet { min-height: 2.75rem; } }
+
+.dialog { animation: dialog-in .28s var(--ease-out) both; }
+.dialog::backdrop { animation: backdrop-in .2s var(--ease-out) both; }
+.dialog input[type="date"] { min-width: 0; -webkit-appearance: none; appearance: none; }
+@media (max-width: 639px) {
+  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1.4rem 1.4rem 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); animation-name: sheet-in; }
+}
+@keyframes dialog-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+@keyframes sheet-in { from { transform: translateY(40%); opacity: 0; } }
+@keyframes backdrop-in { from { opacity: 0; } }
