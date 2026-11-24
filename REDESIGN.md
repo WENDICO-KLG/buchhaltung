@@ -42,3 +42,11 @@ Existing CSS variables, class names and components/ui APIs keep working (--gold*
 - sales: app/prospects/**, components/prospects-section.tsx, app/customers/*
 - workspace: app/todos/*, app/profile/*, app/settings/*, app/login/*, app/auth/*, components/layout/company-team.tsx
 - tester: tests/visual/*, and fixes anywhere once all builders are done
+
+## Foundation notes (read)
+- Look at ~/JARVIS/workspace/buchhaltung-design/vp-dashboard-{d,m}-dark.png: shell and plates are approved. `vp.mjs <route> <themes> <d,m> [scrollN]` there takes viewport shots, `kit.png` shows all components.
+- .panel/.plate 27px radius with built-in specular edge via ::before (leave it free; no border, no bg-[var(--surface)] on panels). .raised one focal card per page, .tile 22px, .overlay dialogs (sets no position, scrolls safely). .pill-track wraps .filter/.filter-active. .icon-button 40px circle: never override its width/height separately. Scroller goes inside the plate.
+- --plate --raised --glass-round --glow-fill --active-fill are gradient lists: use `background:` in CSS, not bg-[var()]. --green --ink --muted --line --hairline --field --surface are plain colours. Edges for odd elements: --edge-shadow.
+- rounded-2xl = 27px, xl 18, lg 14; text-sm 13.5px. `Status` = glowing dot + text. Right-align amounts. --chart-1 green, 2–5 greys. tsconfig.tsbuildinfo / next-env.d.ts must not be committed.
+- Dim text belongs on plates, not directly on the bright part of the ribbon.
+- Icons: lucide, strokeWidth 1.6. Avoid large empty holes inside cards; emptiness belongs between cards.
