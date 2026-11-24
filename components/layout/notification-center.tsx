@@ -111,18 +111,18 @@ export function NotificationCenter() {
     window.localStorage.setItem("wendico.dismissed-notifications", JSON.stringify(next));
   }
 
-  return <div className="relative">
+  return <div className="relative" onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
     <button onClick={() => setOpen((current) => !current)} aria-label="Benachrichtigungen" aria-expanded={open} className="header-icon-button">
       {visible.length ? <BellRing size={18} /> : <Bell size={18} />}
       {visible.length > 0 && <span className="notification-count">{visible.length > 9 ? "9+" : visible.length}</span>}
     </button>
-    {open && <div className="notification-popover">
-      <div className="flex items-start justify-between border-b border-[var(--line)] px-4 py-3"><div><h2 className="text-sm font-semibold text-[var(--ink)]">Fälligkeiten</h2><p className="mt-0.5 text-xs text-[var(--muted)]">Rechnungen und nächste Aufgaben</p></div><button onClick={() => setOpen(false)} aria-label="Schließen" className="icon-button"><X size={16}/></button></div>
+    {open && <div role="region" aria-label="Fälligkeiten" className="notification-popover overlay">
+      <div className="flex items-start justify-between border-b border-[var(--line)] py-3 pl-5 pr-3"><div><h2 className="text-base font-semibold text-[var(--ink)]">Fälligkeiten</h2><p className="mt-0.5 text-sm text-[var(--muted)]">Rechnungen und nächste Aufgaben</p></div><button onClick={() => setOpen(false)} aria-label="Schließen" className="icon-button"><X size={16}/></button></div>
       {(permission === "default" || permission === "granted" && !pushReady) && <div className="border-b border-[var(--line)] p-3"><button onClick={enableNotifications} className="primary w-full">{permission === "granted" ? "Push-Dienst verbinden" : "Browser-Benachrichtigungen aktivieren"}</button></div>}
-      {permission === "granted" && pushReady && <p className="border-b border-[var(--line)] px-4 py-3 text-xs font-semibold text-[#17b26a]">Push-Benachrichtigungen sind aktiv.</p>}
-      {permission === "denied" && <p className="border-b border-[var(--line)] px-4 py-3 text-xs text-[var(--muted)]">Benachrichtigungen sind im Browser blockiert. Die Hinweise bleiben hier sichtbar.</p>}
-      {pushError && <p className="border-b border-[var(--line)] px-4 py-3 text-xs text-[#b42318]">{pushError}</p>}
-      <div className="max-h-[360px] overflow-y-auto">{visible.length ? visible.map((item) => <div key={item.id} className="notification-row"><Link href={item.href} onClick={() => setOpen(false)} className="flex min-w-0 flex-1 gap-3"><span className={item.overdue ? "notification-icon overdue" : "notification-icon"}>{item.kind === "invoice" ? <FileWarning size={16}/> : <CalendarClock size={16}/>}</span><span className="min-w-0"><strong className="block truncate text-sm text-[var(--ink)]">{item.title}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{item.detail}</span></span></Link><button onClick={() => dismiss(item.id)} title="Erledigt" aria-label={`${item.title} als erledigt markieren`} className="icon-button"><CheckCircle2 size={16}/></button></div>) : <div className="px-5 py-10 text-center text-sm text-[var(--muted)]">Aktuell ist nichts fällig.</div>}</div>
+      {permission === "granted" && pushReady && <p className="border-b border-[var(--line)] px-5 py-3 text-sm font-medium text-[var(--emerald)]">Push-Benachrichtigungen sind aktiv.</p>}
+      {permission === "denied" && <p className="border-b border-[var(--line)] px-5 py-3 text-sm text-[var(--muted)]">Benachrichtigungen sind im Browser blockiert. Die Hinweise bleiben hier sichtbar.</p>}
+      {pushError && <p className="border-b border-[var(--line)] px-5 py-3 text-sm text-[var(--coral)]">{pushError}</p>}
+      <div className="max-h-[min(360px,60dvh)] overflow-y-auto">{visible.length ? visible.map((item) => <div key={item.id} className="notification-row"><Link href={item.href} onClick={() => setOpen(false)} className="flex min-w-0 flex-1 items-center gap-3"><span className={item.overdue ? "notification-icon overdue" : "notification-icon"}>{item.kind === "invoice" ? <FileWarning size={16}/> : <CalendarClock size={16}/>}</span><span className="min-w-0"><strong className="block truncate text-sm font-semibold text-[var(--ink)]">{item.title}</strong><span className="mt-0.5 block text-[13px] text-[var(--muted)]">{item.overdue && <span className="font-medium text-[var(--coral)]">Überfällig · </span>}{item.detail}</span></span></Link><button onClick={() => dismiss(item.id)} title="Erledigt" aria-label={`${item.title} als erledigt markieren`} className="icon-button"><CheckCircle2 size={16}/></button></div>) : <div className="px-5 py-10 text-center text-sm text-[var(--muted)]">Aktuell ist nichts fällig.</div>}</div>
     </div>}
   </div>;
 }
