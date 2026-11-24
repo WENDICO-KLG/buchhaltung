@@ -90,8 +90,8 @@ function ObjectionTrainer() {
 
     <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3">
       <div className="flex flex-wrap gap-1" role="group" aria-label="Kategorien">
-        <button aria-pressed={!categories.length} className={!categories.length ? "filter-active" : "filter"} onClick={() => startRound([])}>Alle<span className="ml-1.5 tabular-nums opacity-70">{objections.length}</span></button>
-        {objectionCategories.map((category) => <button key={category} aria-pressed={categories.includes(category)} className={categories.includes(category) ? "filter-active" : "filter"} onClick={() => startRound(toggleCategory(categories, category))}>{objectionCategoryLabels[category]}<span className="ml-1.5 tabular-nums opacity-70">{objections.filter((item) => item.category === category).length}</span></button>)}
+        <button aria-pressed={!categories.length} className={!categories.length ? "filter-active" : "filter"} onClick={() => startRound([])}>Alle<span className="ml-1.5 tabular-nums">{objections.length}</span></button>
+        {objectionCategories.map((category) => <button key={category} aria-pressed={categories.includes(category)} className={categories.includes(category) ? "filter-active" : "filter"} onClick={() => startRound(toggleCategory(categories, category))}>{objectionCategoryLabels[category]}<span className="ml-1.5 tabular-nums">{objections.filter((item) => item.category === category).length}</span></button>)}
       </div>
       <label className="ml-auto flex min-h-11 items-center gap-2.5 text-sm max-sm:ml-0 text-[var(--muted)]"><input type="checkbox" role="switch" className="commission-switch" checked={onlyOpen} onChange={() => startRound(categories, !onlyOpen)}/>Nur offene üben<span className="tabular-nums">({open})</span></label>
     </div>

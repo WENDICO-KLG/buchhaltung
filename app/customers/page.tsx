@@ -106,7 +106,7 @@ export default function CustomersPage() {
       {error && !showForm && <ErrorNote className="mt-6">{error}</ErrorNote>}
 
       <section aria-label="Einnahmen" className="panel relative isolate mt-8 overflow-hidden rounded-3xl p-5 sm:p-8">
-        <Guilloche className="absolute -top-40 right-[34%] -z-10 w-[34rem] max-lg:-right-40 max-sm:-right-64"/>
+        <Guilloche className="absolute -top-80 right-[8%] -z-10 w-[34rem] max-lg:-right-40 max-sm:-right-64"/>
         {loaded ? <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <Stat size="lg" label="Wiederkehrend Ø / Monat" hint="Jährliche Zahlungen anteilig /12" value={<CountUp value={totals.averageMonthly} format={formatCurrency}/>}/>
           <div className="flex flex-wrap gap-x-10 gap-y-5">

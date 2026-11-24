@@ -37,7 +37,7 @@
   --plate: rgba(17, 27, 22, .82);
   --raised: rgba(25, 37, 31, .9);
   --overlay: rgba(14, 22, 18, .94);
-  --chrome: rgba(10, 17, 14, .66);
+  --chrome: rgba(10, 17, 14, .88);
   --chrome-solid: #0b120f;
   --hairline: rgba(217, 182, 106, .24);
   --plate-edge: rgba(255, 248, 225, .07);
@@ -86,7 +86,7 @@
   --plate: rgba(255, 252, 245, .78);
   --raised: rgba(255, 253, 248, .92);
   --overlay: rgba(255, 253, 248, .96);
-  --chrome: rgba(250, 246, 236, .66);
+  --chrome: rgba(250, 246, 236, .9);
   --chrome-solid: #faf6ec;
   --hairline: rgba(150, 110, 30, .3);
   --plate-edge: rgba(255, 255, 255, .85);

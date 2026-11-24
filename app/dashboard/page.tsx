@@ -210,7 +210,7 @@ export default function Dashboard() {
         </div>
       </>}
       {prospects && <Pipeline prospects={prospects} month={currentMonth}/>}
-      {!loadFailed && <div className="grid grid-cols-1 items-start gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+      {!loadFailed && <div className="grid grid-cols-1 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
         <Plate className="grid h-full grid-cols-1 gap-9 lg:grid-cols-2 lg:gap-0 lg:[&>:first-child]:border-r lg:[&>:first-child]:border-[var(--line)] lg:[&>:first-child]:pr-7 lg:[&>:last-child]:pl-7">
           <Ranking title="Einnahmen nach Kunde" subtitle={periodLabel} rows={revenueByCustomer} kind="income" empty="Keine Einnahmen im Zeitraum." href="/customers" loading={loading}/>
           <Ranking title="Ausgaben nach Posten" subtitle={periodLabel} rows={costsByVendor} kind="cost" empty="Keine Ausgaben im Zeitraum." href="/analytics" loading={loading}/>

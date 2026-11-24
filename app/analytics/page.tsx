@@ -133,7 +133,7 @@ export default function ExpensesPage() {
     </section>
 
     <section className="panel relative mt-5 overflow-hidden rounded-2xl" aria-busy={loading}>
-      <Guilloche className="absolute -left-64 -top-52 w-[34rem] opacity-20 md:opacity-30"/>
+      <Guilloche className="absolute -left-72 -top-80 w-[34rem] opacity-20 md:opacity-30"/>
       <div className="relative grid gap-8 p-6 md:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-12">
         <div className="flex min-w-0 flex-col justify-between gap-8">
           <Stat size="lg" label={filterMode === "customer" ? "Ausgaben bis heute" : "Ausgaben im Zeitraum"} value={loading ? "–" : <CountUp value={total} format={formatCurrency}/>} hint={loading ? undefined : `${filteredExpenses.length} ${filteredExpenses.length === 1 ? "Position" : "Positionen"}`}/>
@@ -145,7 +145,7 @@ export default function ExpensesPage() {
 
     <section aria-label="Ausgabenliste" className="panel mt-5 overflow-hidden rounded-2xl">
       {loading ? <div className="grid gap-4 p-6">{[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-10"/>)}</div> : filteredExpenses.length ? <>
-        <table className="hidden w-full text-left text-sm lg:table"><thead className="text-[13px] text-[var(--muted)]"><tr className="[&>th]:font-medium"><th className="py-4 pl-7 pr-4">Datum</th><th className="px-4">Lieferant</th><th className="px-4">Beschreibung</th><th className="px-4">Kunde</th><th className="px-4 text-right">Betrag</th><th className="pl-4 pr-6 text-right"><span className="sr-only">Aktionen</span></th></tr></thead>
+        <table className="hidden w-full text-left text-sm xl:table"><thead className="text-[13px] text-[var(--muted)]"><tr className="[&>th]:font-medium"><th className="py-4 pl-7 pr-4">Datum</th><th className="px-4">Lieferant</th><th className="px-4">Beschreibung</th><th className="px-4">Kunde</th><th className="px-4 text-right">Betrag</th><th className="pl-4 pr-6 text-right"><span className="sr-only">Aktionen</span></th></tr></thead>
           <tbody>{filteredExpenses.map((expense) => <tr key={expense.id} className="border-t border-[var(--line)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)]">
             <td className="whitespace-nowrap py-4 pl-7 pr-4 text-[var(--muted)]">{dateLabel(expense)}</td>
             <td className="px-4 font-semibold">{expense.vendor}</td>
@@ -154,7 +154,7 @@ export default function ExpensesPage() {
             <td className="money whitespace-nowrap px-4 text-right text-base font-semibold">{formatCurrency(expense.amount, expense.currency)}</td>
             <td className="pl-4 pr-6"><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></td>
           </tr>)}</tbody></table>
-        <ul className="divide-y divide-[var(--line)] lg:hidden">{filteredExpenses.map((expense) => <li key={expense.id} className="px-5 pb-2 pt-4">
+        <ul className="divide-y divide-[var(--line)] xl:hidden">{filteredExpenses.map((expense) => <li key={expense.id} className="px-5 pb-2 pt-4">
           <div className="flex items-baseline justify-between gap-4"><p className="min-w-0 break-words font-semibold">{expense.vendor}</p><p className="money flex-none font-semibold">{formatCurrency(expense.amount, expense.currency)}</p></div>
           <p className="mt-1 text-sm text-[var(--muted)]">{expense.description}</p>
           <div className="mt-1 flex items-center justify-between gap-3"><p className="min-w-0 text-[13px] text-[var(--muted)]">{dateLabel(expense)}{expense.isRecurring && <Interval expense={expense}/>}<span className="block truncate">{customerNames.get(expense.customerId ?? "") ?? "Nicht zugeordnet"}</span></p><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></div>
@@ -172,7 +172,7 @@ function Actions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => voi
   return <div className="flex flex-none justify-end gap-1"><button onClick={onEdit} aria-label="Ausgabe bearbeiten" title="Ausgabe bearbeiten" className="icon-button"><Pencil size={16} strokeWidth={1.7}/></button><button onClick={onRemove} aria-label="Ausgabe löschen" title="Ausgabe löschen" className="icon-button hover:text-[var(--coral)]"><Trash2 size={16} strokeWidth={1.7}/></button></div>;
 }
 
-const single = "color-mix(in srgb, var(--chart-2) 48%, transparent)";
+const single = "color-mix(in oklab, var(--chart-2) 45%, var(--ink))";
 
 function MonthBars({ data, selected, onSelect }: { data: { key: string; recurring: number; single: number }[]; selected?: string; onSelect: (key: string) => void }) {
   const max = Math.max(...data.map((entry) => entry.recurring + entry.single));

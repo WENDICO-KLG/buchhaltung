@@ -37,7 +37,7 @@ function HeroFrame({ children }: { children: ReactNode }) {
 }
 
 function Amount({ value }: { value: number }) {
-  return <span className="whitespace-nowrap"><span className="mr-[.4em] text-[.38em] tracking-normal opacity-75">CHF</span><CountUp value={value} format={plainAmount}/></span>;
+  return <span className="whitespace-nowrap"><span className="mr-[.4em] text-[max(.38em,.8125rem)] tracking-normal text-[var(--muted)]">CHF</span><CountUp value={value} format={plainAmount}/></span>;
 }
 
 function SmallAmount({ value }: { value: number }) {
