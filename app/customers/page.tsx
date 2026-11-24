@@ -5,11 +5,11 @@ import { Mail, Pencil, Phone, Plus, Trash2, Upload, Users } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Guilloche } from "@/components/ui/guilloche";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Stat } from "@/components/ui/stat";
 import { ErrorNote, Field, FieldGroup, fieldLabel, FormDialog } from "@/app/prospects/_components/form-dialog";
+import contactStyles from "@/app/prospects/pipeline.module.css";
 import { createCustomer, deleteCustomer, getCustomers, updateCustomer, uploadCustomerLogo, setCustomerCommissionEnabled } from "@/lib/storage";
 import { getActiveCompany } from "@/lib/company";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +18,7 @@ import type { Customer, RecurringInterval } from "@/types";
 
 type CustomerForm = Omit<Customer, "id" | "createdAt" | "updatedAt" | "logoUrl">;
 const emptyForm: CustomerForm = { companyName: "", contactName: "", email: "", phone: "", address: "", project: "", recurringRevenue: 0, billingInterval: "monthly", billingStartDate: "", billingEndDate: "", oneTimeRevenue: 0, oneTimeRevenueDate: "", notes: "" };
+const plainAmount = (value: number) => formatCurrency(value).replace(/^CHF\s*/, "");
 const formatMonth = (date: string, month: "short" | "long" = "short") => new Date(`${date.slice(0, 7)}-01T12:00:00`).toLocaleDateString("de-CH", { month, year: "numeric" });
 const formatDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString("de-CH");
 const intervalLabel: Record<RecurringInterval, string> = { monthly: "Monatlich", yearly: "Jährlich" };
@@ -102,32 +103,31 @@ export default function CustomersPage() {
 
   return <WorkspaceShell active="Kunden" title="Wendico / Kunden">
     <div className="page-enter">
-      <PageHeader title="Kunden" subtitle="Wiederkehrende und einmalige Einnahmen pro Kunde." actions={<button onClick={() => { reset(); setShowForm(true); }} className="primary max-sm:w-full"><Plus size={16}/>Kunde hinzufügen</button>}/>
+      <PageHeader title="Kunden" subtitle="Wiederkehrende und einmalige Einnahmen pro Kunde." actions={<button onClick={() => { reset(); setShowForm(true); }} className="primary max-sm:w-full"><Plus size={16} strokeWidth={1.8}/>Kunde hinzufügen</button>}/>
       {error && !showForm && <ErrorNote className="mt-6">{error}</ErrorNote>}
 
-      <section aria-label="Einnahmen" className="panel relative isolate mt-8 overflow-hidden rounded-3xl p-5 sm:p-8">
-        <Guilloche className="absolute -top-80 right-[8%] -z-10 w-[34rem] max-lg:-right-40 max-sm:-right-64"/>
-        {loaded ? <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <Stat size="lg" label="Wiederkehrend Ø / Monat" hint="Jährliche Zahlungen anteilig /12" value={<CountUp value={totals.averageMonthly} format={formatCurrency}/>}/>
-          <div className="flex flex-wrap gap-x-10 gap-y-5">
+      <section aria-label="Einnahmen" className="raised mt-7 p-5 sm:p-8">
+        {loaded ? <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+          <Stat size="lg" label="Wiederkehrend Ø / Monat" hint="Jährliche Zahlungen anteilig /12" value={<><span className="text-lg text-[var(--muted)] mr-2.5 sm:text-2xl">CHF</span><CountUp value={totals.averageMonthly} format={plainAmount}/></>}/>
+          <div className="grid gap-x-10 gap-y-5 border-t border-[var(--line)] pt-6 sm:grid-cols-2 xl:border-l xl:border-t-0 xl:pl-10 xl:pt-0">
             <Stat label={`Einmalig ${year}`} hint="Nach Zahlungsdatum" value={formatCurrency(totals.oneTime)}/>
             <Stat label={`Jahreswert ${year}`} hint="Wiederkehrend nach Zeitraum + einmalig" value={formatCurrency(totals.annual)}/>
           </div>
         </div> : <div className="max-w-md"><Skeleton className="w-40"/><Skeleton className="mt-4 h-14 w-full"/><Skeleton className="mt-4 w-52"/></div>}
       </section>
 
-      <div className="panel mt-6 overflow-hidden rounded-2xl bg-[var(--surface)]">
-        {!loaded ? <div className="space-y-6 p-6">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14"/>)}</div>
-          : customers.length ? customers.map((customer) => <article key={customer.id} className="grid grid-cols-1 gap-x-8 gap-y-4 border-t border-[var(--line)] px-4 py-5 transition-colors first:border-t-0 hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)] sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,.9fr)_auto] lg:py-6">
+      <div className="panel mt-6 px-5 py-2 sm:px-7">
+        {!loaded ? <div className="space-y-6 py-5">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14"/>)}</div>
+          : customers.length ? customers.map((customer) => <article key={customer.id} className="grid grid-cols-1 gap-x-8 gap-y-4 border-t border-[var(--line)] py-5 first:border-t-0 md:grid-cols-2 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,.9fr)_auto] xl:py-6">
             <div className="flex min-w-0 items-start gap-4">
-              <label title="Logo hochladen" className={`group relative flex h-14 w-20 flex-none cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--gold)] ${customer.logoUrl ? "bg-[#fbf8f0]" : "bg-[var(--surface-soft)]"}`}>
+              <label title="Logo hochladen" className={`group relative flex h-14 w-14 flex-none cursor-pointer items-center justify-center overflow-hidden rounded-full p-2 text-[var(--muted)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--primary)] ${customer.logoUrl ? "bg-white" : "shadow-[var(--edge-shadow)] [background:var(--glass-round)]"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- public Supabase logo URL */}
                 {customer.logoUrl ? <img src={customer.logoUrl} alt={customer.companyName} className="max-h-full max-w-full object-contain"/> : <Users aria-hidden size={20} strokeWidth={1.5}/>}
-                <span aria-hidden className="absolute inset-0 flex items-center justify-center bg-black/65 text-[#fff] opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"><Upload size={17}/></span>
+                <span aria-hidden className="absolute inset-0 flex items-center justify-center bg-black/65 text-[white] opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"><Upload size={16} strokeWidth={1.6}/></span>
                 <input type="file" aria-label={`Logo für ${customer.companyName} hochladen`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadLogo(customer.id, file); event.target.value = ""; }}/>
               </label>
               <div className="min-w-0">
-                <h2 className="text-lg font-semibold leading-snug [overflow-wrap:anywhere]">{customer.companyName}</h2>
+                <h2 className="text-base font-semibold leading-snug [overflow-wrap:anywhere]">{customer.companyName}</h2>
                 <p className="mt-0.5 text-sm text-[var(--muted)]">{customer.contactName || "Keine Kontaktperson"}</p>
                 {customer.project && <p className="mt-1 text-sm">{customer.project}</p>}
                 {customer.notes && <p className="mt-2 text-[13px] text-[var(--muted)]">{customer.notes}</p>}
@@ -137,15 +137,15 @@ export default function CustomersPage() {
               <Revenue prominent label={intervalLabel[customer.billingInterval]} value={customer.recurringRevenue} active={customer.recurringRevenue > 0 && isRecurringActive(customer.billingStartDate, customer.billingEndDate, todayKey().slice(0, 7))} detail={customer.recurringRevenue > 0 ? `${periodLabel(customer)}${customer.billingInterval === "yearly" && customer.billingStartDate ? ` · jeweils im ${formatMonth(customer.billingStartDate, "long").split(" ")[0]}` : ""}` : undefined}/>
               <Revenue label="Einmalig" value={customer.oneTimeRevenue} active={customer.oneTimeRevenue > 0} detail={customer.oneTimeRevenue > 0 ? customer.oneTimeRevenueDate ? `am ${formatDate(customer.oneTimeRevenueDate)}` : "ohne Datum – nicht gezählt" : undefined}/>
             </div>
-            <div className="min-w-0 text-sm text-[var(--muted)] lg:space-y-1">
-              {customer.email && <a href={`mailto:${customer.email}`} className="flex min-w-0 items-center gap-2 hover:text-[var(--ink)] max-lg:min-h-11"><Mail aria-hidden size={14} className="flex-none"/><span className="truncate">{customer.email}</span></a>}
-              {customer.phone && <a href={`tel:${customer.phone}`} className="money flex min-w-0 items-center gap-2 hover:text-[var(--ink)] max-lg:min-h-11"><Phone aria-hidden size={14} className="flex-none"/><span className="truncate">{customer.phone}</span></a>}
+            <div className="flex min-w-0 gap-2 text-sm text-[var(--muted)] empty:hidden xl:block xl:space-y-1 xl:empty:block">
+              {customer.email && <a href={`mailto:${customer.email}`} className={contactStyles.contact}><Mail aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span className="truncate">{customer.email}</span></a>}
+              {customer.phone && <a href={`tel:${customer.phone}`} className={`${contactStyles.contact} money`}><Phone aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span className="truncate">{customer.phone}</span></a>}
             </div>
-            <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end lg:justify-start">
-              <label className="flex min-h-11 items-center gap-3 text-sm lg:order-2"><span>Provision</span><input type="checkbox" role="switch" aria-label={`Provision für ${customer.companyName}`} checked={commissionStates[customer.id] ?? false} disabled={!manageCommission || Boolean(commissionBusy)} onChange={(event) => void toggleCommission(customer.id,event.target.checked)} className="commission-switch"/></label>
-              <div className="flex gap-1 lg:-mt-1.5">
-                <button onClick={() => edit(customer)} aria-label="Kunde bearbeiten" title={`${customer.companyName} bearbeiten`} className="icon-button"><Pencil size={16}/></button>
-                <button onClick={() => remove(customer.id)} aria-label="Kunde löschen" title={`${customer.companyName} löschen`} className="icon-button hover:!text-[var(--coral)]"><Trash2 size={16}/></button>
+            <div className="flex items-center justify-between gap-3 xl:flex-col xl:items-end xl:justify-start">
+              <label className="flex min-h-11 items-center gap-3 text-sm text-[var(--muted)] xl:order-2"><span>Provision</span><input type="checkbox" role="switch" aria-label={`Provision für ${customer.companyName}`} checked={commissionStates[customer.id] ?? false} disabled={!manageCommission || Boolean(commissionBusy)} onChange={(event) => void toggleCommission(customer.id,event.target.checked)} className="switch"/></label>
+              <div className="flex gap-2 xl:-mt-1.5">
+                <button onClick={() => edit(customer)} aria-label="Kunde bearbeiten" title={`${customer.companyName} bearbeiten`} className="icon-button"><Pencil size={15} strokeWidth={1.6}/></button>
+                <button onClick={() => remove(customer.id)} aria-label="Kunde löschen" title={`${customer.companyName} löschen`} className="icon-button hover:!text-[var(--coral)]"><Trash2 size={15} strokeWidth={1.6}/></button>
               </div>
             </div>
           </article>) : <EmptyState icon={Users} title="Noch keine Kunden erfasst." text="Erfasse den ersten Kunden mit seinen Einnahmen."/>}
@@ -183,5 +183,5 @@ function MoneyField({ label, value, onChange }: { label: string; value: number; 
   return <label className="flex min-w-0 flex-col justify-end"><span className={fieldLabel}>{label} (CHF)</span><input type="number" min="0" step="0.01" value={editing ? draft : value} onFocus={() => { setDraft(value === 0 ? "" : String(value)); setEditing(true); }} onBlur={() => setEditing(false)} onChange={(event) => { setDraft(event.target.value); onChange(Number(event.target.value)); }} className="field"/></label>;
 }
 function Revenue({ label, value, detail, active, prominent = false }: { label: string; value: number; detail?: string; active: boolean; prominent?: boolean }) {
-  return <div className="min-w-0"><p className="text-[13px] text-[var(--muted)]">{label}</p><p className={`money mt-0.5 whitespace-nowrap ${prominent ? "text-xl font-semibold tracking-tight" : "text-base font-medium leading-7"} ${!active ? "text-[var(--muted)]" : prominent ? "text-[var(--emerald)]" : ""}`}>{formatCurrency(value)}</p>{detail && <p className="mt-0.5 text-[13px] leading-snug text-[var(--muted)]">{detail}</p>}</div>;
+  return <div className="min-w-0"><p className="flex items-center gap-2 text-[13px] text-[var(--muted)]">{prominent && <span aria-hidden className={`dot ${active ? "dot-on" : ""}`}/>}{label}</p><p className={`money mt-0.5 whitespace-nowrap ${prominent ? "text-base font-semibold" : "text-base font-normal"} ${!active ? "text-[var(--muted)]" : ""}`}>{formatCurrency(value)}</p>{detail && <p className="mt-0.5 text-xs leading-snug text-[var(--muted)]">{detail}</p>}</div>;
 }

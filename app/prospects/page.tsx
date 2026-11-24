@@ -7,16 +7,15 @@ import { ProspectsTabs } from "@/components/prospects-section";
 import { celebrate } from "@/components/ui/celebration";
 import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Guilloche } from "@/components/ui/guilloche";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Stat } from "@/components/ui/stat";
 import { Status } from "@/components/ui/status";
-import { toneColor, type Tone } from "@/components/ui/tone";
+import type { Tone } from "@/components/ui/tone";
 import { createProspect, deleteProspect, getProspects, updateProspect } from "@/lib/storage";
 import { formatCurrency, todayKey } from "@/lib/utils";
 import type { Prospect, ProspectStatus } from "@/types";
 import { ErrorNote, Field, FieldGroup, fieldLabel, FormDialog } from "./_components/form-dialog";
+import styles from "./pipeline.module.css";
 
 type ProspectForm = Omit<Prospect, "id" | "createdAt" | "updatedAt">;
 const emptyForm: ProspectForm = { companyName: "", contactName: "", email: "", phone: "", source: "", status: "new", lastContactAt: "", nextTask: "", nextTaskAt: "", estimatedValue: undefined, notes: "" };
@@ -25,6 +24,7 @@ const tones: Record<ProspectStatus, Tone> = { new: "neutral", contacted: "neutra
 const statuses = Object.keys(labels) as ProspectStatus[];
 const isOpen = (status: ProspectStatus) => status !== "won" && status !== "lost";
 const sumValue = (items: Prospect[]) => items.reduce((sum, prospect) => sum + (prospect.estimatedValue ?? 0), 0);
+const plainAmount = (value: number) => formatCurrency(value).replace(/^CHF\s*/, "");
 const countLabel = (count: number) => `${count} ${count === 1 ? "Prospect" : "Prospects"}`;
 
 export default function ProspectsPage() {
@@ -72,38 +72,36 @@ export default function ProspectsPage() {
   return <WorkspaceShell active="Prospects" title="Wendico / Prospects">
     <div className="page-enter">
       <ProspectsTabs current="/prospects"/>
-      <PageHeader title="Prospects" subtitle="Kontakte, nächste Aufgaben und aktuellen Stand pflegen." actions={<button onClick={add} className="primary max-sm:w-full"><Plus size={16}/>Prospect hinzufügen</button>}/>
+      <PageHeader title="Prospects" subtitle="Kontakte, nächste Aufgaben und aktuellen Stand pflegen." actions={<button onClick={add} className="primary max-sm:w-full"><Plus size={16} strokeWidth={1.8}/>Prospect hinzufügen</button>}/>
       {error && !showForm && <ErrorNote className="mt-6">{error}</ErrorNote>}
 
-      <section aria-label="Pipeline nach Stand" className="panel relative isolate mt-8 overflow-hidden rounded-3xl">
-        <Guilloche className="absolute -right-20 -top-44 -z-10 w-[34rem] max-sm:-right-64"/>
-        <div className="p-5 sm:p-8">
-          {loaded
-            ? <Stat size="lg" label="Offene Pipeline" value={<CountUp value={sumValue(open)} format={formatCurrency}/>} hint={`${countLabel(open.length)} von Neu bis Offerte${withoutValue ? `, ${withoutValue} ohne Wert` : ""}`}/>
-            : <div className="w-full max-w-md"><Skeleton className="w-28"/><Skeleton className="mt-4 h-14 w-full"/><Skeleton className="mt-4 w-48"/></div>}
-        </div>
-        <div role="group" aria-label="Nach Stand filtern" className="grid grid-cols-2 gap-px border-t border-[var(--line)] bg-[var(--line)] md:grid-cols-3 xl:grid-cols-6">
-          {stages.map(({ status, items, value }) => <button key={status} aria-pressed={filter === status} onClick={() => setFilter(filter === status ? "all" : status)} className={`flex min-w-0 flex-col p-4 text-left transition-colors focus-visible:outline-offset-[-3px] sm:px-5 sm:py-5 ${filter === status ? "bg-[var(--surface-soft)] shadow-[inset_0_2px_0_var(--gold)]" : "bg-[var(--surface)] hover:bg-[var(--surface-soft)]"}`}>
-            <span className="flex w-full items-baseline justify-between gap-2 text-sm"><span className={filter === status ? "font-semibold" : "text-[var(--muted)]"}>{labels[status]}</span><span className="money text-[var(--muted)]">{items.length}<span className="sr-only"> Prospects</span></span></span>
-            <span className="money mt-2 text-base font-semibold tracking-tight sm:text-lg">{formatCurrency(value)}</span>
-            <span aria-hidden className="mt-4 block h-1 w-full overflow-hidden rounded-full bg-[var(--ring-track)]"><span className="bar-value block h-full rounded-full" style={{ width: `${highest ? Math.max(0, value / highest) * 100 : 0}%`, background: toneColor[tones[status]] }}/></span>
+      <section aria-label="Pipeline nach Stand" className="raised mt-7 p-5 sm:p-7">
+        {loaded ? <>
+          <p className="text-sm text-[var(--muted)]">Offene Pipeline</p>
+          <p className="display mt-2 flex flex-wrap items-baseline gap-x-2.5"><span className="text-lg text-[var(--muted)] sm:text-2xl">CHF</span><span className="text-[clamp(2.5rem,5vw,3.5rem)]"><CountUp value={sumValue(open)} format={plainAmount}/></span></p>
+          <p className="mt-2 text-sm text-[var(--muted)]">{countLabel(open.length)} von Neu bis Offerte{withoutValue ? `, ${withoutValue} ohne Wert` : ""}</p>
+        </> : <div className="w-full max-w-md"><Skeleton className="w-28"/><Skeleton className="mt-4 h-14 w-full"/><Skeleton className="mt-4 w-48"/></div>}
+        <div role="group" aria-label="Nach Stand filtern" className={styles.scale}>
+          {stages.map(({ status, items, value }) => <button key={status} aria-pressed={filter === status} onClick={() => setFilter(filter === status ? "all" : status)} className={`${styles.stage} ${items.length ? "" : styles.empty}`}>
+            <span aria-hidden className={styles.bar} data-won={status === "won" && value > 0 ? "" : undefined}><span style={{ height: `${highest ? Math.max(0, value / highest) * 100 : 0}%` }}/></span>
+            <span className={styles.label}>{labels[status]}<span className="money">{items.length}<span className="sr-only"> Prospects</span></span></span>
+            <span className={`${styles.value} money`}>{formatCurrency(value)}</span>
           </button>)}
         </div>
       </section>
 
-      <div className="mt-10 flex items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold">{filter === "all" ? "Alle Prospects" : labels[filter]}</h2>
-        <button aria-pressed={filter === "all"} onClick={() => setFilter("all")} className={filter === "all" ? "filter-active" : "filter"}>Alle<span className="money ml-2 text-[var(--muted)]">{prospects.length}</span></button>
-      </div>
-
-      <div className="panel mt-4 overflow-hidden rounded-2xl bg-[var(--surface)]">
-        {!loaded ? <div className="space-y-6 p-6">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-10"/>)}</div>
-          : shown.length ? shown.map(({ status, items, value }) => <section key={status} aria-label={labels[status]} className="border-t border-[var(--line)] first:border-t-0">
-            <h3 className="flex items-center justify-between gap-4 bg-[var(--surface-soft)] px-4 py-3 text-sm sm:px-6"><span className="flex items-center gap-3"><Status tone={tones[status]} className="text-sm font-semibold">{labels[status]}</Status><span className="money font-normal text-[var(--muted)]">{items.length}</span></span><span className="money font-semibold text-[var(--muted)]">{formatCurrency(value)}</span></h3>
+      <section aria-labelledby="prospects-title" className="panel mt-6 overflow-hidden">
+        <div className="flex items-center justify-between gap-4 px-5 pb-3 pt-5 sm:px-7 sm:pt-6">
+          <h2 id="prospects-title" className="text-base font-semibold">{filter === "all" ? "Alle Prospects" : labels[filter]}</h2>
+          <button aria-pressed={filter === "all"} onClick={() => setFilter("all")} className={filter === "all" ? "filter-active" : "filter"}>Alle<span className="money ml-1">{prospects.length}</span></button>
+        </div>
+        {!loaded ? <div className="space-y-6 p-7">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-10"/>)}</div>
+          : shown.length ? <div className="pb-2">{shown.map(({ status, items, value }) => <section key={status} aria-label={labels[status]} className="px-5 sm:px-7">
+            <h3 className="flex items-center justify-between gap-4 pb-2.5 pt-6 text-sm"><span className="flex items-center gap-3"><Status tone={tones[status]}>{labels[status]}</Status><span className="money text-[13px] font-normal text-[var(--muted)]">{items.length}</span></span><span className="money text-[13px] font-normal text-[var(--muted)]">{formatCurrency(value)}</span></h3>
             <ul>{items.map((prospect) => <ProspectRow key={prospect.id} prospect={prospect} onEdit={() => edit(prospect)} onRemove={() => remove(prospect.id)}/>)}</ul>
-          </section>)
-          : <EmptyState icon={ContactRound} title={prospects.length ? "Keine Prospects in dieser Ansicht." : "Noch keine Prospects erfasst."} text={prospects.length ? undefined : "Mit dem ersten Eintrag beginnt die Pipeline."} action={prospects.length ? <button onClick={() => setFilter("all")} className="action">Alle anzeigen</button> : undefined}/>}
-      </div>
+          </section>)}</div>
+          : <EmptyState icon={ContactRound} className="pt-6" title={prospects.length ? "Keine Prospects in dieser Ansicht." : "Noch keine Prospects erfasst."} text={prospects.length ? undefined : "Mit dem ersten Eintrag beginnt die Pipeline."} action={prospects.length ? <button onClick={() => setFilter("all")} className="action">Alle anzeigen</button> : undefined}/>}
+      </section>
     </div>
 
     {showForm && <FormDialog title={editingId ? "Prospect bearbeiten" : "Prospect hinzufügen"} submitLabel={editingId ? "Änderungen speichern" : "Prospect speichern"} error={error} onSubmit={submit} onClose={reset}>
@@ -130,25 +128,25 @@ export default function ProspectsPage() {
 
 function ProspectRow({ prospect, onEdit, onRemove }: { prospect: Prospect; onEdit: () => void; onRemove: () => void }) {
   const overdue = isOpen(prospect.status) && Boolean(prospect.nextTaskAt) && prospect.nextTaskAt!.slice(0, 10) < todayKey();
-  return <li className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-3 border-t border-[var(--line)] px-4 py-4 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)] sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1.05fr)_minmax(0,1.25fr)_7.75rem_auto] lg:gap-x-6">
+  return <li className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-3 border-t border-[var(--line)] py-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1.05fr)_minmax(0,1.25fr)_7.75rem_auto] xl:gap-x-6 xl:py-5">
     <div className="min-w-0">
-      <p className="font-semibold leading-snug [overflow-wrap:anywhere]">{prospect.companyName}</p>
+      <p className="font-medium leading-snug [overflow-wrap:anywhere]">{prospect.companyName}</p>
       <p className="mt-0.5 text-sm text-[var(--muted)]">{prospect.contactName || prospect.source || "-"}</p>
       {prospect.notes && <p className="mt-1.5 line-clamp-2 text-[13px] text-[var(--muted)]">{prospect.notes}</p>}
     </div>
-    <div className="text-right lg:order-4"><p className={`money font-semibold ${prospect.estimatedValue == null ? "text-[var(--muted)]" : ""}`}>{prospect.estimatedValue != null ? formatCurrency(prospect.estimatedValue) : "-"}</p></div>
-    <div className="col-span-2 min-w-0 text-sm max-lg:col-start-1 lg:order-2 lg:col-span-1">
+    <div className="text-right xl:order-4"><p className={`money font-medium ${prospect.estimatedValue == null ? "text-[var(--muted)]" : ""}`}>{prospect.estimatedValue != null ? formatCurrency(prospect.estimatedValue) : "-"}</p></div>
+    <div className="col-span-2 min-w-0 text-sm max-xl:col-start-1 xl:order-2 xl:col-span-1">
       <p className={prospect.nextTask ? "" : "text-[var(--muted)]"}>{prospect.nextTask || "Keine Aufgabe"}</p>
       {prospect.nextTaskAt && <p className={`money mt-0.5 ${overdue ? "font-medium text-[var(--coral)]" : "text-[var(--muted)]"}`}>{overdue ? "Überfällig seit " : ""}{formatDate(prospect.nextTaskAt)}</p>}
       <p className="money mt-0.5 text-[13px] text-[var(--muted)]">{prospect.lastContactAt ? `Letzter Kontakt ${formatDate(prospect.lastContactAt)}` : formatDate()}</p>
     </div>
-    <div className="col-span-2 flex min-w-0 flex-wrap gap-x-5 text-sm text-[var(--muted)] max-lg:col-start-1 max-lg:row-start-3 max-lg:pr-24 lg:order-3 lg:col-span-1 lg:block lg:space-y-1">
-      {prospect.email && <a href={`mailto:${prospect.email}`} className="flex min-w-0 items-center gap-2 hover:text-[var(--ink)] max-lg:min-h-11"><Mail aria-hidden size={14} className="flex-none"/><span className="truncate">{prospect.email}</span></a>}
-      {prospect.phone && <a href={`tel:${prospect.phone}`} className="money flex min-w-0 items-center gap-2 hover:text-[var(--ink)] max-lg:min-h-11"><Phone aria-hidden size={14} className="flex-none"/><span className="truncate">{prospect.phone}</span></a>}
+    <div className="col-span-2 flex min-w-0 gap-2 text-sm text-[var(--muted)] max-xl:col-start-1 max-xl:row-start-3 max-xl:pr-24 xl:order-3 xl:col-span-1 xl:block xl:space-y-1">
+      {prospect.email && <a href={`mailto:${prospect.email}`} className={styles.contact}><Mail aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span className="truncate">{prospect.email}</span></a>}
+      {prospect.phone && <a href={`tel:${prospect.phone}`} className={`${styles.contact} money`}><Phone aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span className="truncate">{prospect.phone}</span></a>}
     </div>
-    <div className="flex justify-end gap-1 max-lg:col-start-2 max-lg:row-start-3 max-lg:self-center lg:order-5 lg:-mt-1.5">
-      <button onClick={onEdit} aria-label="Prospect bearbeiten" title={`${prospect.companyName} bearbeiten`} className="icon-button"><Pencil size={16}/></button>
-      <button onClick={onRemove} aria-label="Prospect löschen" title={`${prospect.companyName} löschen`} className="icon-button hover:!text-[var(--coral)]"><Trash2 size={16}/></button>
+    <div className="flex justify-end gap-2 max-xl:col-start-2 max-xl:row-start-3 max-xl:self-center xl:order-5 xl:-mt-1.5">
+      <button onClick={onEdit} aria-label="Prospect bearbeiten" title={`${prospect.companyName} bearbeiten`} className="icon-button"><Pencil size={15} strokeWidth={1.6}/></button>
+      <button onClick={onRemove} aria-label="Prospect löschen" title={`${prospect.companyName} löschen`} className="icon-button hover:!text-[var(--coral)]"><Trash2 size={15} strokeWidth={1.6}/></button>
     </div>
   </li>;
 }

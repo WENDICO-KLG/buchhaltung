@@ -16,12 +16,12 @@ export function FormDialog({ title, error, submitLabel, onSubmit, onClose, child
   }, []);
   useEffect(() => { if (error) alert.current?.scrollIntoView({ block: "nearest" }); }, [error]);
   return <dialog ref={dialog} aria-label={title} className={`${styles.dialog} overlay`} onClose={(event) => { if (!event.currentTarget.open) onClose(); }}>
-    <form onSubmit={onSubmit} className="flex h-full max-h-[inherit] flex-col">
-      <div className="flex flex-none items-center justify-between gap-4 border-b border-[var(--line)] px-5 py-3 sm:px-7 sm:py-4">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        <button type="button" onClick={onClose} aria-label="Schliessen" className="header-icon-button -mr-2"><X size={20}/></button>
+    <form onSubmit={onSubmit} className={styles.form}>
+      <div className="flex flex-none items-center justify-between gap-4 px-5 pb-2 pt-4 sm:px-7 sm:pt-5">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <button type="button" onClick={onClose} aria-label="Schliessen" className="header-icon-button -mr-1.5"><X size={18} strokeWidth={1.6}/></button>
       </div>
-      <div className="min-h-0 flex-1 space-y-7 overflow-y-auto overscroll-contain px-5 py-6 sm:px-7">
+      <div className="min-h-0 flex-1 space-y-8 overflow-y-auto overscroll-contain px-5 py-4 sm:px-7">
         {error && <div ref={alert}><ErrorNote>{error}</ErrorNote></div>}
         {children}
       </div>
@@ -34,12 +34,12 @@ export function FormDialog({ title, error, submitLabel, onSubmit, onClose, child
 }
 
 export function ErrorNote({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div role="alert" className={`rounded-xl bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)] ${className}`}>{children}</div>;
+  return <div role="alert" className={`tile flex items-baseline gap-3 px-5 py-3.5 text-sm text-[var(--coral)] ${className}`}><span aria-hidden className="dot dot-off"/><span className="min-w-0">{children}</span></div>;
 }
 
 export function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return <fieldset className="min-w-0">
-    <legend className="mb-3 text-base font-semibold">{title}</legend>
+    <legend className="mb-3 text-sm font-semibold">{title}</legend>
     <div className="grid gap-4 sm:grid-cols-2">{children}</div>
   </fieldset>;
 }
