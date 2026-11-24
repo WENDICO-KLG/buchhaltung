@@ -56,7 +56,7 @@ function burst(canvas: HTMLCanvasElement) {
   canvas.width = width * ratio;
   canvas.height = height * ratio;
   context.scale(ratio, ratio);
-  const colors = ["#f1d999", "#d9b66a", "#b98f3f", "#8c6a26"];
+  const colors = ["#ffffff", "#8d8d8d", "#4fe32f", "#2c8f1a"];
   const leaves = Array.from({ length: width < 768 ? 70 : 130 }, (_, index) => {
     const angle = Math.random() * Math.PI * 2;
     const speed = 120 + Math.random() * 480;

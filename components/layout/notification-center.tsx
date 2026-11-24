@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BellRing, CalendarClock, CheckCircle2, FileWarning, X } from "lucide-react";
+import { Bell, CalendarClock, CheckCircle2, FileWarning, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getInvoices, getProspects, getTodos, savePushSubscription } from "@/lib/storage";
 import type { Invoice, Prospect, Todo } from "@/types";
@@ -113,11 +113,11 @@ export function NotificationCenter() {
 
   return <div className="relative" onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
     <button onClick={() => setOpen((current) => !current)} aria-label="Benachrichtigungen" aria-expanded={open} className="header-icon-button">
-      {visible.length ? <BellRing size={18} /> : <Bell size={18} />}
-      {visible.length > 0 && <span className="notification-count">{visible.length > 9 ? "9+" : visible.length}</span>}
+      <Bell size={20} strokeWidth={1.9} />
+      {visible.length > 0 && <span aria-hidden className="notification-count"/>}
     </button>
     {open && <div role="region" aria-label="Fälligkeiten" className="notification-popover overlay">
-      <div className="flex items-start justify-between border-b border-[var(--line)] py-3 pl-5 pr-3"><div><h2 className="text-base font-semibold text-[var(--ink)]">Fälligkeiten</h2><p className="mt-0.5 text-sm text-[var(--muted)]">Rechnungen und nächste Aufgaben</p></div><button onClick={() => setOpen(false)} aria-label="Schließen" className="icon-button"><X size={16}/></button></div>
+      <div className="flex items-start justify-between border-b border-[var(--line)] py-4 pl-5 pr-4"><div><h2 className="text-base font-semibold text-[var(--ink)]">Fälligkeiten{visible.length > 0 && <span className="money ml-2 font-normal text-[var(--muted)]">{visible.length}</span>}</h2><p className="mt-0.5 text-sm text-[var(--muted)]">Rechnungen und nächste Aufgaben</p></div><button onClick={() => setOpen(false)} aria-label="Schließen" className="icon-button"><X size={16}/></button></div>
       {(permission === "default" || permission === "granted" && !pushReady) && <div className="border-b border-[var(--line)] p-3"><button onClick={enableNotifications} className="primary w-full">{permission === "granted" ? "Push-Dienst verbinden" : "Browser-Benachrichtigungen aktivieren"}</button></div>}
       {permission === "granted" && pushReady && <p className="border-b border-[var(--line)] px-5 py-3 text-sm font-medium text-[var(--emerald)]">Push-Benachrichtigungen sind aktiv.</p>}
       {permission === "denied" && <p className="border-b border-[var(--line)] px-5 py-3 text-sm text-[var(--muted)]">Benachrichtigungen sind im Browser blockiert. Die Hinweise bleiben hier sichtbar.</p>}
