@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Mail, Pencil, Phone, Plus, ReceiptText, Repeat, Trash2, Upload, Users } from "lucide-react";
+import { Mail, Pencil, Phone, Plus, Trash2, Upload, Users } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { CountUp } from "@/components/ui/count-up";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Guilloche } from "@/components/ui/guilloche";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Stat } from "@/components/ui/stat";
+import { ErrorNote, Field, FieldGroup, fieldLabel, FormDialog } from "@/app/prospects/_components/form-dialog";
 import { createCustomer, deleteCustomer, getCustomers, updateCustomer, uploadCustomerLogo, setCustomerCommissionEnabled } from "@/lib/storage";
 import { getActiveCompany } from "@/lib/company";
 import { supabase } from "@/lib/supabase";
@@ -25,6 +32,7 @@ function periodLabel(customer: Pick<Customer, "billingStartDate" | "billingEndDa
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [form, setForm] = useState<CustomerForm>(emptyForm);
   const [editingId, setEditingId] = useState<string>();
   const [showForm, setShowForm] = useState(false);
@@ -50,7 +58,7 @@ export default function CustomersPage() {
     finally { setCommissionBusy(undefined); }
   }
 
-  useEffect(() => { getCustomers().then(setCustomers).catch((cause) => setError(cause instanceof Error ? cause.message : "Kunden konnten nicht geladen werden.")); }, []);
+  useEffect(() => { getCustomers().then(setCustomers).catch((cause) => setError(cause instanceof Error ? cause.message : "Kunden konnten nicht geladen werden.")).finally(() => setLoaded(true)); }, []);
 
   const year = Number(todayKey().slice(0, 4));
   const totals = useMemo(() => {
@@ -93,87 +101,87 @@ export default function CustomersPage() {
   const yearly = form.billingInterval === "yearly";
 
   return <WorkspaceShell active="Kunden" title="Wendico / Kunden">
-    <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[.18em] text-[var(--primary)]">Kontakte & Einnahmen</p>
-        <h1 className="mt-3 text-3xl font-semibold text-[var(--ink)]">Kunden</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">Wiederkehrende und einmalige Einnahmen pro Kunde.</p>
+    <div className="page-enter">
+      <PageHeader title="Kunden" subtitle="Wiederkehrende und einmalige Einnahmen pro Kunde." actions={<button onClick={() => { reset(); setShowForm(true); }} className="primary max-sm:w-full"><Plus size={16}/>Kunde hinzufügen</button>}/>
+      {error && !showForm && <ErrorNote className="mt-6">{error}</ErrorNote>}
+
+      <section aria-label="Einnahmen" className="panel relative isolate mt-8 overflow-hidden rounded-3xl p-5 sm:p-8">
+        <Guilloche className="absolute -top-40 right-[34%] -z-10 w-[34rem] max-lg:-right-40 max-sm:-right-64"/>
+        {loaded ? <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <Stat size="lg" label="Wiederkehrend Ø / Monat" hint="Jährliche Zahlungen anteilig /12" value={<CountUp value={totals.averageMonthly} format={formatCurrency}/>}/>
+          <div className="flex flex-wrap gap-x-10 gap-y-5">
+            <Stat label={`Einmalig ${year}`} hint="Nach Zahlungsdatum" value={formatCurrency(totals.oneTime)}/>
+            <Stat label={`Jahreswert ${year}`} hint="Wiederkehrend nach Zeitraum + einmalig" value={formatCurrency(totals.annual)}/>
+          </div>
+        </div> : <div className="max-w-md"><Skeleton className="w-40"/><Skeleton className="mt-4 h-14 w-full"/><Skeleton className="mt-4 w-52"/></div>}
+      </section>
+
+      <div className="panel mt-6 overflow-hidden rounded-2xl bg-[var(--surface)]">
+        {!loaded ? <div className="space-y-6 p-6">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14"/>)}</div>
+          : customers.length ? customers.map((customer) => <article key={customer.id} className="grid grid-cols-1 gap-x-8 gap-y-4 border-t border-[var(--line)] px-4 py-5 transition-colors first:border-t-0 hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)] sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,.9fr)_auto] lg:py-6">
+            <div className="flex min-w-0 items-start gap-4">
+              <label title="Logo hochladen" className={`group relative flex h-14 w-20 flex-none cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--gold)] ${customer.logoUrl ? "bg-[#fbf8f0]" : "bg-[var(--surface-soft)]"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- public Supabase logo URL */}
+                {customer.logoUrl ? <img src={customer.logoUrl} alt={customer.companyName} className="max-h-full max-w-full object-contain"/> : <Users aria-hidden size={20} strokeWidth={1.5}/>}
+                <span aria-hidden className="absolute inset-0 flex items-center justify-center bg-black/65 text-[#fff] opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"><Upload size={17}/></span>
+                <input type="file" aria-label={`Logo für ${customer.companyName} hochladen`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadLogo(customer.id, file); event.target.value = ""; }}/>
+              </label>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold leading-snug [overflow-wrap:anywhere]">{customer.companyName}</h2>
+                <p className="mt-0.5 text-sm text-[var(--muted)]">{customer.contactName || "Keine Kontaktperson"}</p>
+                {customer.project && <p className="mt-1 text-sm">{customer.project}</p>}
+                {customer.notes && <p className="mt-2 text-[13px] text-[var(--muted)]">{customer.notes}</p>}
+              </div>
+            </div>
+            <div className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-2">
+              <Revenue prominent label={intervalLabel[customer.billingInterval]} value={customer.recurringRevenue} active={customer.recurringRevenue > 0 && isRecurringActive(customer.billingStartDate, customer.billingEndDate, todayKey().slice(0, 7))} detail={customer.recurringRevenue > 0 ? `${periodLabel(customer)}${customer.billingInterval === "yearly" && customer.billingStartDate ? ` · jeweils im ${formatMonth(customer.billingStartDate, "long").split(" ")[0]}` : ""}` : undefined}/>
+              <Revenue label="Einmalig" value={customer.oneTimeRevenue} active={customer.oneTimeRevenue > 0} detail={customer.oneTimeRevenue > 0 ? customer.oneTimeRevenueDate ? `am ${formatDate(customer.oneTimeRevenueDate)}` : "ohne Datum – nicht gezählt" : undefined}/>
+            </div>
+            <div className="min-w-0 text-sm text-[var(--muted)] lg:space-y-1">
+              {customer.email && <a href={`mailto:${customer.email}`} className="flex min-w-0 items-center gap-2 hover:text-[var(--ink)] max-lg:min-h-11"><Mail aria-hidden size={14} className="flex-none"/><span className="truncate">{customer.email}</span></a>}
+              {customer.phone && <a href={`tel:${customer.phone}`} className="money flex min-w-0 items-center gap-2 hover:text-[var(--ink)] max-lg:min-h-11"><Phone aria-hidden size={14} className="flex-none"/><span className="truncate">{customer.phone}</span></a>}
+            </div>
+            <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end lg:justify-start">
+              <label className="flex min-h-11 items-center gap-3 text-sm lg:order-2"><span>Provision</span><input type="checkbox" role="switch" aria-label={`Provision für ${customer.companyName}`} checked={commissionStates[customer.id] ?? false} disabled={!manageCommission || Boolean(commissionBusy)} onChange={(event) => void toggleCommission(customer.id,event.target.checked)} className="commission-switch"/></label>
+              <div className="flex gap-1 lg:-mt-1.5">
+                <button onClick={() => edit(customer)} aria-label="Kunde bearbeiten" title={`${customer.companyName} bearbeiten`} className="icon-button"><Pencil size={16}/></button>
+                <button onClick={() => remove(customer.id)} aria-label="Kunde löschen" title={`${customer.companyName} löschen`} className="icon-button hover:!text-[var(--coral)]"><Trash2 size={16}/></button>
+              </div>
+            </div>
+          </article>) : <EmptyState icon={Users} title="Noch keine Kunden erfasst." text="Erfasse den ersten Kunden mit seinen Einnahmen."/>}
       </div>
-      <button onClick={() => { reset(); setShowForm(true); }} className="primary flex items-center gap-2"><Plus size={16}/>Kunde hinzufügen</button>
     </div>
-    {error && <div role="alert" className="mt-5 rounded-lg border border-[#fda29b] bg-[#fee4e2] px-4 py-3 text-sm text-[#b42318]">{error}</div>}
 
-    <section className="mt-6 grid gap-3 sm:grid-cols-3">
-      <RevenueMetric label="Wiederkehrend Ø / Monat" hint="Jährliche Zahlungen anteilig /12" value={totals.averageMonthly} icon={Repeat}/>
-      <RevenueMetric label={`Einmalig ${year}`} hint="Nach Zahlungsdatum" value={totals.oneTime} icon={ReceiptText}/>
-      <RevenueMetric label={`Jahreswert ${year}`} hint="Wiederkehrend nach Zeitraum + einmalig" value={totals.annual} icon={Users}/>
-    </section>
-
-    {showForm && <form onSubmit={submit} className="panel mt-6 rounded-2xl p-5">
-      <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-3 text-sm font-semibold text-[var(--ink)]">Kontakt</legend>
-        <Field label="Firma / Name" required value={form.companyName} onChange={(value) => set("companyName", value)}/>
+    {showForm && <FormDialog title={editingId ? "Kunde bearbeiten" : "Kunde hinzufügen"} submitLabel={editingId ? "Änderungen speichern" : "Kunde speichern"} error={error} onSubmit={submit} onClose={reset}>
+      <FieldGroup title="Kontakt">
+        <div className="sm:col-span-2"><Field label="Firma / Name" required value={form.companyName} onChange={(value) => set("companyName", value)}/></div>
         <Field label="Kontaktperson" value={form.contactName ?? ""} onChange={(value) => set("contactName", value)}/>
         <Field label="Projekt" value={form.project ?? ""} onChange={(value) => set("project", value)}/>
         <Field label="E-Mail" type="email" value={form.email ?? ""} onChange={(value) => set("email", value)}/>
         <Field label="Telefon" value={form.phone ?? ""} onChange={(value) => set("phone", value)}/>
-        <Field label="Adresse" value={form.address ?? ""} onChange={(value) => set("address", value)}/>
-      </fieldset>
-      <fieldset className="mt-6 grid gap-4 border-t border-[var(--line)] pt-5 sm:grid-cols-2 lg:grid-cols-4">
-        <legend className="mb-3 pt-5 text-sm font-semibold text-[var(--ink)]">Wiederkehrende Zahlung</legend>
-        <label><span className="mb-2 block text-xs text-[var(--muted)]">Intervall</span><select value={form.billingInterval} onChange={(event) => set("billingInterval", event.target.value as RecurringInterval)} className="field"><option value="monthly">Monatlich</option><option value="yearly">Jährlich</option></select></label>
+        <div className="sm:col-span-2"><Field label="Adresse" value={form.address ?? ""} onChange={(value) => set("address", value)}/></div>
+      </FieldGroup>
+      <FieldGroup title="Wiederkehrende Zahlung">
+        <label className="flex min-w-0 flex-col justify-end"><span className={fieldLabel}>Intervall</span><select value={form.billingInterval} onChange={(event) => set("billingInterval", event.target.value as RecurringInterval)} className="field"><option value="monthly">Monatlich</option><option value="yearly">Jährlich</option></select></label>
         <MoneyField label={yearly ? "Betrag pro Jahr" : "Betrag pro Monat"} value={form.recurringRevenue} onChange={(value) => set("recurringRevenue", value)}/>
         <Field label={yearly ? "Zahlend ab (bestimmt Zahlungsmonat)" : "Zahlend ab"} type="date" required={yearly && form.recurringRevenue > 0} value={form.billingStartDate ?? ""} onChange={(value) => set("billingStartDate", value)}/>
         <Field label="Zahlend bis (leer = unbefristet)" type="date" value={form.billingEndDate ?? ""} onChange={(value) => set("billingEndDate", value)}/>
-        {yearly && form.billingStartDate && <p className="text-xs text-[var(--muted)] sm:col-span-2 lg:col-span-4">Wird jedes Jahr im {formatMonth(form.billingStartDate, "long").split(" ")[0]} als Umsatz gezählt.</p>}
-      </fieldset>
-      <fieldset className="mt-6 grid gap-4 border-t border-[var(--line)] pt-5 sm:grid-cols-2 lg:grid-cols-4">
-        <legend className="mb-3 pt-5 text-sm font-semibold text-[var(--ink)]">Einmalige Zahlung</legend>
+        {yearly && form.billingStartDate && <p className="text-sm text-[var(--muted)] sm:col-span-2">Wird jedes Jahr im {formatMonth(form.billingStartDate, "long").split(" ")[0]} als Umsatz gezählt.</p>}
+      </FieldGroup>
+      <FieldGroup title="Einmalige Zahlung">
         <MoneyField label="Betrag" value={form.oneTimeRevenue} onChange={(value) => set("oneTimeRevenue", value)}/>
         <Field label="Zahlungsdatum" type="date" required={form.oneTimeRevenue > 0} value={form.oneTimeRevenueDate ?? ""} onChange={(value) => set("oneTimeRevenueDate", value)}/>
-      </fieldset>
-      <label className="mt-6 block border-t border-[var(--line)] pt-5"><span className="mb-2 block text-xs text-[var(--muted)]">Notizen</span><textarea rows={3} value={form.notes ?? ""} onChange={(event) => set("notes", event.target.value)} className="field"/></label>
-      <div className="mt-5 flex gap-2"><button className="primary">{editingId ? "Änderungen speichern" : "Kunde speichern"}</button><button type="button" onClick={reset} className="action">Abbrechen</button></div>
-    </form>}
-
-    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {customers.map((customer) => <article key={customer.id} className="panel rounded-2xl p-5">
-        <div className="flex items-start justify-between">
-          <label className="group relative flex h-11 min-w-11 cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-[var(--surface-soft)] px-1 text-[var(--primary)]">
-            {/* eslint-disable-next-line @next/next/no-img-element -- public Supabase logo URL */}
-            {customer.logoUrl ? <img src={customer.logoUrl} alt={customer.companyName} className="h-full w-auto max-w-none object-contain"/> : <Users size={20}/>}
-            <span className="absolute inset-0 hidden items-center justify-center bg-black/60 group-hover:flex"><Upload size={16} className="text-white"/></span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadLogo(customer.id, file); event.target.value = ""; }}/>
-          </label>
-          <div className="flex gap-1">
-            <button onClick={() => edit(customer)} aria-label="Kunde bearbeiten" className="icon-button"><Pencil size={15}/></button>
-            <button onClick={() => remove(customer.id)} aria-label="Kunde löschen" className="icon-button text-[var(--danger)]"><Trash2 size={15}/></button>
-          </div>
-        </div>
-        <h2 className="mt-4 text-lg font-semibold text-[var(--ink)]">{customer.companyName}</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">{customer.contactName || "Keine Kontaktperson"}</p>
-        <label className="mt-4 flex items-center justify-between gap-3 text-sm"><span>Provision</span><input type="checkbox" role="switch" aria-label={`Provision für ${customer.companyName}`} checked={commissionStates[customer.id] ?? false} disabled={!manageCommission || Boolean(commissionBusy)} onChange={(event) => void toggleCommission(customer.id,event.target.checked)} className="commission-switch"/></label>
-        {customer.project && <p className="mt-4 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs text-[var(--primary)]">{customer.project}</p>}
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Revenue label={intervalLabel[customer.billingInterval]} value={customer.recurringRevenue} detail={customer.recurringRevenue > 0 ? `${periodLabel(customer)}${customer.billingInterval === "yearly" && customer.billingStartDate ? ` · jeweils im ${formatMonth(customer.billingStartDate, "long").split(" ")[0]}` : ""}` : undefined}/>
-          <Revenue label="Einmalig" value={customer.oneTimeRevenue} detail={customer.oneTimeRevenue > 0 ? customer.oneTimeRevenueDate ? `am ${formatDate(customer.oneTimeRevenueDate)}` : "ohne Datum – nicht gezählt" : undefined}/>
-        </div>
-        <div className="mt-4 space-y-2 text-xs text-[var(--muted)]">
-          {customer.email && <a href={`mailto:${customer.email}`} className="flex items-center gap-2 hover:text-[var(--ink)]"><Mail size={14}/>{customer.email}</a>}
-          {customer.phone && <a href={`tel:${customer.phone}`} className="flex items-center gap-2 hover:text-[var(--ink)]"><Phone size={14}/>{customer.phone}</a>}
-        </div>
-        {customer.notes && <p className="mt-4 border-t border-[var(--line)] pt-4 text-xs leading-5 text-[var(--muted)]">{customer.notes}</p>}
-      </article>)}
-      {!customers.length && <div className="panel col-span-full rounded-2xl py-14 text-center text-sm text-[var(--muted)]">Noch keine Kunden erfasst.</div>}
-    </div>
+      </FieldGroup>
+      <label className="block"><span className={fieldLabel}>Notizen</span><textarea rows={3} value={form.notes ?? ""} onChange={(event) => set("notes", event.target.value)} className="field"/></label>
+    </FormDialog>}
   </WorkspaceShell>;
 }
 
-function Field({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) { return <label><span className="mb-2 block text-xs text-[var(--muted)]">{label}</span><input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="field"/></label>; }
 function MoneyField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  return <label><span className="mb-2 block text-xs text-[var(--muted)]">{label} (CHF)</span><input type="number" min="0" step="0.01" value={editing ? draft : value} onFocus={() => { setDraft(value === 0 ? "" : String(value)); setEditing(true); }} onBlur={() => setEditing(false)} onChange={(event) => { setDraft(event.target.value); onChange(Number(event.target.value)); }} className="field"/></label>;
+  return <label className="flex min-w-0 flex-col justify-end"><span className={fieldLabel}>{label} (CHF)</span><input type="number" min="0" step="0.01" value={editing ? draft : value} onFocus={() => { setDraft(value === 0 ? "" : String(value)); setEditing(true); }} onBlur={() => setEditing(false)} onChange={(event) => { setDraft(event.target.value); onChange(Number(event.target.value)); }} className="field"/></label>;
 }
-function RevenueMetric({ label, hint, value, icon: Icon }: { label: string; hint: string; value: number; icon: typeof Users }) { return <div className="panel rounded-2xl p-4"><div className="flex justify-between text-xs text-[var(--muted)]"><span>{label}</span><Icon size={16} className="text-[var(--primary)]"/></div><p className="mt-2 text-xl font-semibold tabular-nums text-[var(--ink)]">{formatCurrency(value)}</p><p className="mt-1 text-[11px] text-[var(--muted)]">{hint}</p></div>; }
-function Revenue({ label, value, detail }: { label: string; value: number; detail?: string }) { return <div className="rounded-lg border border-[var(--line)] p-3"><p className="text-[11px] text-[var(--muted)]">{label}</p><p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{formatCurrency(value)}</p>{detail && <p className="mt-1 flex items-start gap-1 text-[11px] leading-4 text-[var(--muted)]"><CalendarRange size={11} className="mt-0.5 flex-none"/>{detail}</p>}</div>; }
+function Revenue({ label, value, detail, active, prominent = false }: { label: string; value: number; detail?: string; active: boolean; prominent?: boolean }) {
+  return <div className="min-w-0"><p className="text-[13px] text-[var(--muted)]">{label}</p><p className={`money mt-0.5 whitespace-nowrap ${prominent ? "text-xl font-semibold tracking-tight" : "text-base font-medium leading-7"} ${!active ? "text-[var(--muted)]" : prominent ? "text-[var(--emerald)]" : ""}`}>{formatCurrency(value)}</p>{detail && <p className="mt-0.5 text-[13px] leading-snug text-[var(--muted)]">{detail}</p>}</div>;
+}
