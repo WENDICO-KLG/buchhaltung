@@ -5,6 +5,7 @@ import { Database, Download, Moon, ShieldCheck, Sun } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { CompanyTeam } from "@/components/layout/company-team";
+import { cn } from "@/lib/utils";
 import { getAllWorkspaceItems, getCompanyProfile, getCustomers, getDocuments, getExpenses, getInvoices, getProspects, getWorkspaceFiles } from "@/lib/storage";
 
 export default function SettingsPage() {
@@ -17,13 +18,13 @@ export default function SettingsPage() {
       <PageHeader title="Einstellungen" subtitle="Datensicherung, Darstellung und Zugriff."/>
       <div className="mt-8 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
         <CompanyTeam/>
-        <div className="plate divide-y divide-[var(--line)] rounded-2xl px-5 sm:px-7 xl:sticky xl:top-[calc(var(--header-h)+2rem)]">
-          <Section icon={Database} title="Datensicherung" description="Lade eine Kopie aller Geschäfts- und Kontaktdaten herunter."><button onClick={exportData} className="action"><Download size={17}/>Daten exportieren</button>{notice && <p role="status" className="mt-3 text-sm text-[var(--emerald)]">{notice}</p>}</Section>
-          <Section icon={lightMode ? Sun : Moon} title="Darstellung" description="Wechsle zwischen heller und dunkler Oberfläche."><button onClick={toggleTheme} className="action">{lightMode ? <Moon size={17}/> : <Sun size={17}/>}Modus wechseln</button></Section>
-          <Section icon={ShieldCheck} title="Sicherheit" description="Supabase schützt den Zugriff auf eure Daten."><p className="text-sm text-[var(--muted)]">Leser sehen Firmendaten. Mitarbeiter bearbeiten Geschäftsdaten. Administratoren verwalten zusätzlich das Team und Firmenprofil. Nur Inhaber ernennen Administratoren.</p></Section>
+        <div className="grid items-start gap-4 sm:grid-cols-2 xl:sticky xl:top-[calc(var(--header-h)+2rem)] xl:grid-cols-1">
+          <Section icon={lightMode ? Sun : Moon} title="Darstellung" description={lightMode ? "Helle Oberfläche" : "Dunkle Oberfläche"} control={<label className="-m-2 flex p-2"><input type="checkbox" role="switch" className="switch" aria-label="Dunkle Oberfläche" checked={!lightMode} onChange={toggleTheme}/></label>}/>
+          <Section icon={Database} title="Datensicherung" description="Lade eine Kopie aller Geschäfts- und Kontaktdaten herunter."><button onClick={exportData} className="action"><Download size={16} strokeWidth={1.6}/>Daten exportieren</button>{notice && <p role="status" className="mt-3 flex items-center gap-2.5 text-sm text-[var(--emerald)]"><span aria-hidden className="dot dot-on"/>{notice}</p>}</Section>
+          <Section icon={ShieldCheck} title="Sicherheit" description="Supabase schützt den Zugriff auf eure Daten." className="sm:col-span-2 xl:col-span-1"><p className="text-[13px] leading-relaxed text-[var(--muted)]">Leser sehen Firmendaten. Mitarbeiter bearbeiten Geschäftsdaten. Administratoren verwalten zusätzlich das Team und Firmenprofil. Nur Inhaber ernennen Administratoren.</p></Section>
         </div>
       </div>
     </div>
   </WorkspaceShell>;
 }
-function Section({ icon: Icon, title, description, children }: { icon: typeof Database; title: string; description: string; children: React.ReactNode }) { return <section className="py-6"><h2 className="flex items-center gap-2.5 text-lg font-semibold"><Icon aria-hidden size={19} strokeWidth={1.6} className="text-[var(--muted)]"/>{title}</h2><p className="mt-1.5 text-sm text-[var(--muted)]">{description}</p><div className="mt-4">{children}</div></section>; }
+function Section({ icon: Icon, title, description, control, className, children }: { icon: typeof Database; title: string; description: string; control?: React.ReactNode; className?: string; children?: React.ReactNode }) { return <section className={cn("tile p-6", className)}><div className="flex items-start justify-between gap-4"><h2 className="text-base font-semibold">{title}</h2>{control}</div><p className="mt-1 flex items-start gap-2 text-[13px] text-[var(--muted)]"><Icon aria-hidden size={15} strokeWidth={1.6} className="mt-0.5 shrink-0"/>{description}</p>{children && <div className="mt-5">{children}</div>}</section>; }

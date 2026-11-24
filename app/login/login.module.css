@@ -1,0 +1,7 @@
+/* Outside the workspace the ribbon may carry the picture. */
+:root:not(:global(.light)) .stage { --ground-dim: linear-gradient(transparent, transparent); --muted: #c2c2c2; }
+@media (max-width: 767px) { :root:not(:global(.light)) .stage { --ground-dim: linear-gradient(rgba(5, 5, 5, .22), rgba(5, 5, 5, .22)); } }
+.glass { background: linear-gradient(152deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .015) 38%, rgba(255, 255, 255, .012) 62%, rgba(255, 255, 255, .06)), rgba(6, 6, 6, .46); box-shadow: var(--shadow-plate), var(--shadow-overlay); }
+@media (prefers-reduced-transparency: reduce) { .glass { background: var(--chrome-solid); } }
+:global(.light) .glass { background: var(--raised); }
+@media (min-width: 1024px) { .glass { border-radius: 2.25rem; } }

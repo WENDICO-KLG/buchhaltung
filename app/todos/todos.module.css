@@ -7,25 +7,44 @@
 .dragging { scroll-snap-type: none; scroll-behavior: auto; }
 @media (min-width: 640px) { .viewport { scroll-snap-type: none; } }
 
-.column { transition: border-color .2s var(--ease-out), background-color .2s var(--ease-out); }
-.over { border-color: var(--gold); background-image: linear-gradient(var(--gold-soft), var(--gold-soft)); }
-.card { border: 1px solid var(--line); background: var(--surface); box-shadow: inset 0 1px 0 var(--plate-edge); transition: transform .2s var(--ease-out), border-color .2s var(--ease-out), box-shadow .2s var(--ease-out), opacity .16s var(--ease-out); }
-.card:hover { transform: translateY(-2px); border-color: var(--hairline); box-shadow: inset 0 1px 0 var(--plate-edge), var(--shadow-plate); }
+/* Filters: on the phone the three selects share one line that scrolls. */
+.search { padding-left: 2.75rem; border-radius: 999px; }
+.strip { position: relative; display: flex; gap: .5rem; }
+.strip > label { position: relative; flex: none; }
+.strip .pill { width: auto; max-width: 12.5rem; border-radius: 999px; text-overflow: ellipsis; }
+@media (max-width: 1279px) {
+  .strip { margin-inline: -1rem; padding: .25rem 1rem; overflow-x: auto; scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+}
+
+.column { transition: box-shadow .2s var(--ease-out); }
+.over { box-shadow: var(--shadow-plate), inset 0 0 0 1px color-mix(in srgb, var(--green) 34%, transparent), inset 0 0 44px -14px color-mix(in srgb, var(--green) 32%, transparent); }
+.card { transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out), opacity .16s var(--ease-out); box-shadow: inset 0 18px 34px -26px color-mix(in srgb, #fff 20%, transparent), 0 14px 26px -18px rgba(0, 0, 0, .75); }
+:global(.light) .card { box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 12px 24px -18px rgba(0, 0, 0, .25); }
+.card::before { opacity: .72; }
+.card:hover::before { opacity: 1; }
+.card:hover { transform: translateY(-2px); }
 .lifted { opacity: .3; }
 .lifted:hover { transform: none; }
-.ghost { border: 1px solid var(--gold); background: var(--surface); box-shadow: var(--shadow-overlay); }
+.ghost { background: linear-gradient(152deg, color-mix(in srgb, var(--ink) 9%, transparent), transparent 50%, color-mix(in srgb, var(--ink) 5%, transparent)), var(--chrome-solid); box-shadow: var(--glow), var(--shadow-overlay); transform: rotate(-1.2deg); }
+/* Card buttons stay quiet until they are reached for. */
+.card .plain { background: none; }
+.card .plain::before { opacity: 0; }
+.card .plain:hover::before, .card .plain:focus-visible::before { opacity: 1; }
 
 /* Quiet selects inside a card: text until you reach for them. */
-.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: .5rem; background-color: transparent; padding: 0 1.45rem 0 .5rem !important; color: var(--muted); font-size: .875rem; font-weight: 500; background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50% !important; background-size: 4px 4px !important; transition: color .16s var(--ease-out), background-color .16s var(--ease-out); text-overflow: ellipsis; }
+.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: 999px; background-color: transparent; padding: 0 1.5rem 0 .6rem !important; color: var(--muted); font-size: .8125rem; font-weight: 400; background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50% !important; background-size: 4px 4px !important; transition: color .16s var(--ease-out), background-color .16s var(--ease-out); text-overflow: ellipsis; }
 .card select.quiet:hover { background-color: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
-.card select.strong { color: var(--ink); font-weight: 600; }
+.card select.strong { color: var(--ink); font-weight: 500; }
 @media (pointer: coarse) { .card select.quiet { min-height: 2.75rem; } }
 
 .dialog { animation: dialog-in .28s var(--ease-out) both; }
 .dialog::backdrop { animation: backdrop-in .2s var(--ease-out) both; }
 .dialog input[type="date"] { min-width: 0; -webkit-appearance: none; appearance: none; }
+.head { background: linear-gradient(var(--chrome-solid) 78%, transparent); }
+.comment { border-radius: 1.125rem; padding: .75rem 1rem; background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
 @media (max-width: 639px) {
-  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1.4rem 1.4rem 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); animation-name: sheet-in; }
+  .dialog { margin: auto auto calc(.75rem + env(safe-area-inset-bottom)); width: calc(100% - 1.5rem); max-height: calc(100dvh - 4.5rem - env(safe-area-inset-top)); border-radius: 1.9rem; animation-name: sheet-in; }
 }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
 @keyframes sheet-in { from { transform: translateY(40%); opacity: 0; } }
