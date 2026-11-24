@@ -17,8 +17,8 @@ export function RecentInvoices({ invoices, isOverdue, loading }: { invoices: Inv
       : <ul className="mt-3 divide-y divide-[var(--line)]">{invoices.map((invoice) => {
         const status: InvoiceStatus = isOverdue(invoice) ? "overdue" : invoice.status;
         return <li key={invoice.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 py-3.5 last:pb-0">
-          <p title={invoice.customerName} className="truncate text-sm font-semibold text-[var(--ink)]">{invoice.customerName}</p>
-          <p className="money text-right text-sm font-semibold text-[var(--ink)]">{formatCurrency(invoiceTotal(invoice.items), invoice.currency)}</p>
+          <p title={invoice.customerName} className="truncate text-sm font-medium text-[var(--ink)]">{invoice.customerName}</p>
+          <p className="money text-right text-sm font-medium text-[var(--ink)]">{formatCurrency(invoiceTotal(invoice.items), invoice.currency)}</p>
           <p className="text-[13px] text-[var(--muted)]">{invoice.invoiceNumber} · fällig {dateLabel(invoice.dueDate)}</p>
           <Status tone={tones[status]} className={`justify-self-end ${status === "cancelled" ? "line-through" : ""}`}>{invoiceStatusLabels[status]}</Status>
         </li>;

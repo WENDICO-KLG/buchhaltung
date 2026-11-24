@@ -192,20 +192,20 @@ export default function Dashboard() {
   const margin = metrics.revenue > 0 ? Math.round(metrics.profit / metrics.revenue * 100) : undefined;
 
   return <WorkspaceShell active="Übersicht" title="Wendico / Übersicht"><div className="page-enter">
-    {error && <div role="alert" className="mb-6 flex items-center gap-3 rounded-xl border border-[color-mix(in_srgb,var(--coral)_40%,transparent)] bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)]"><CircleAlert aria-hidden size={18} className="flex-none"/>{error}</div>}
+    {error && <div role="alert" className="tile mb-6 flex items-center gap-3 px-5 py-3.5 text-sm text-[var(--coral)]"><CircleAlert aria-hidden size={18} strokeWidth={1.6} className="flex-none"/>{error}</div>}
 
-    <PageHeader title="Übersicht" subtitle={periodLabel} actions={<PeriodControls mode={rangeMode} onMode={setRangeMode} month={rangeMonth} onMonth={setRangeMonth} year={rangeYear} from={customFrom} onFrom={setCustomFrom} to={customTo} onTo={setCustomTo} onShift={shiftPeriod}
+    <PageHeader className="max-xl:!flex-col max-xl:!items-stretch max-xl:[&>:last-child]:!justify-start" title="Übersicht" subtitle={periodLabel} actions={<PeriodControls mode={rangeMode} onMode={setRangeMode} month={rangeMonth} onMonth={setRangeMonth} year={rangeYear} from={customFrom} onFrom={setCustomFrom} to={customTo} onTo={setCustomTo} onShift={shiftPeriod}
       onToday={(rangeMode === "month" && rangeMonth !== currentMonth) || (rangeMode === "year" && rangeYear !== Number(today.slice(0, 4))) ? () => { setRangeMonth(currentMonth); setRangeYear(Number(today.slice(0, 4))); } : undefined}/>}/>
 
     <div className="mt-7 grid grid-cols-1 gap-5 md:gap-6">
       {loadFailed ? <Plate><EmptyState icon={CircleAlert} title="Keine Zahlen verfügbar" text="Die Finanzdaten konnten nicht geladen werden." action={<button onClick={() => window.location.reload()} className="action">Neu laden</button>}/></Plate> : <>
         <div className="grid grid-cols-1 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
-          <Hero metrics={metrics} previous={previous} comparisonLabel={comparisonLabel} loading={loading} margin={margin} periodLabel={periodLabel}/>
+          <Hero metrics={metrics} previous={previous} comparisonLabel={comparisonLabel} loading={loading} margin={margin} periodLabel={periodLabel} mode={rangeMode} month={rangeMonth} year={rangeYear} onShift={shiftPeriod}
+            note={foreignCurrencyCount > 0 ? `${foreignCurrencyCount} bezahlte Rechnung${foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.` : undefined}/>
           <GoalPanel month={goalMonth} goal={goal} revenue={goalMetrics.revenue} costs={goalMetrics.costs} loading={loading || goalLoad.month !== goalMonth} failed={goalLoad.failed} editing={editingGoal} onEditing={setEditingGoal} form={goalForm} onForm={setGoalForm} saving={saving} onSubmit={submitGoal}/>
         </div>
-        {foreignCurrencyCount > 0 && <p className="-mt-1 text-sm text-[var(--muted)]">{foreignCurrencyCount} bezahlte Rechnung{foreignCurrencyCount === 1 ? "" : "en"} in Fremdwährung im Zeitraum – nicht im CHF-Umsatz enthalten.</p>}
         <div className="grid grid-cols-1 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
-          <div className="grid min-w-0 grid-cols-1 max-xl:order-2"><MonthChart data={chartData} subtitle={rangeMode === "month" ? "Letzte 6 Monate" : "Pro Monat im Zeitraum"} loading={loading}/></div>
+          <div className="grid min-w-0 grid-cols-1 max-xl:order-2"><MonthChart data={chartData} subtitle={rangeMode === "month" ? "Letzte 6 Monate" : "Pro Monat im Zeitraum"} highlightLast={rangeMode === "month"} loading={loading}/></div>
           <Receivables totals={receivables} overdue={overdueInvoices} today={today} loading={loading}/>
         </div>
       </>}

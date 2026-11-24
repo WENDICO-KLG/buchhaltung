@@ -12,7 +12,7 @@ export const plainAmount = (value: number) => formatCurrency(value).replace(/CHF
 export const wholeAmount = (value: number) => new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 }).format(value);
 
 export function Plate({ className, children, ...props }: { className?: string; children: ReactNode; id?: string; "aria-label"?: string }) {
-  return <section className={cn("plate min-w-0 rounded-2xl p-5 md:p-7", className)} {...props}>{children}</section>;
+  return <section className={cn("plate min-w-0 p-5 md:p-7", className)} {...props}>{children}</section>;
 }
 
 export function PlateHeading({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
@@ -21,5 +21,3 @@ export function PlateHeading({ title, subtitle, action }: { title: string; subti
     {action}
   </div>;
 }
-
-export const textLink = "-my-2.5 inline-flex min-h-11 flex-none items-center text-sm font-semibold text-[var(--ink)] underline decoration-[var(--hairline)] underline-offset-4 transition-colors hover:decoration-[var(--gold)]";

@@ -1,4 +1,4 @@
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, Cell, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartColumn } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,23 +13,23 @@ const series = [
 ] as const;
 export type MonthPoint = { month: string } & Record<typeof series[number]["key"], number>;
 
-export function MonthChart({ data, subtitle, loading }: { data: MonthPoint[]; subtitle: string; loading: boolean }) {
+export function MonthChart({ data, subtitle, highlightLast, loading }: { data: MonthPoint[]; subtitle: string; highlightLast: boolean; loading: boolean }) {
   const empty = data.every((point) => series.every(({ key }) => point[key] === 0));
   return <Plate className="flex flex-col">
-    <PlateHeading title="Einnahmen & Abzüge" subtitle={subtitle}/>
-    {loading ? <Skeleton className="mt-6 h-[340px] w-full"/> : empty ? <EmptyState className="my-auto" icon={ChartColumn} title="Noch keine Bewegungen" text="In diesem Zeitraum gibt es weder Einnahmen noch Abzüge."/> : <>
-      <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-[var(--muted)]">{series.map((item) => <li key={item.key} className="flex items-center gap-2"><Swatch {...item}/>{item.key}</li>)}</ul>
-      <div className="mt-5 h-[300px] min-w-0 md:h-[330px]">
+    <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4"><PlateHeading title="Einnahmen & Abzüge" subtitle={subtitle}/>
+      {!loading && !empty && <ul className="flex flex-wrap gap-x-5 gap-y-1.5 pt-0.5 text-[13px] text-[var(--muted)]">{series.map((item) => <li key={item.key} className="flex items-center gap-2"><Swatch color={item.color} line={"line" in item}/>{item.key}</li>)}</ul>}</div>
+    {loading ? <Skeleton className="mt-6 h-[280px] w-full"/> : empty ? <EmptyState className="my-auto" icon={ChartColumn} title="Noch keine Bewegungen" text="In diesem Zeitraum gibt es weder Einnahmen noch Abzüge."/> : <>
+      <div className="mt-6 h-[260px] min-w-0 flex-auto">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} barGap={2} barCategoryGap="26%" margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+          <ComposedChart data={data} barGap={3} barCategoryGap="26%" margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--chart-grid)"/>
-            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} minTickGap={6} tick={{ fill: "var(--muted)", fontSize: 13 }}/>
-            <YAxis tickFormatter={axisAmount} tickLine={false} axisLine={false} width={58} tick={{ fill: "var(--muted)", fontSize: 13 }}/>
+            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} minTickGap={6} tick={{ fontSize: 12 }}/>
+            <YAxis tickFormatter={axisAmount} tickLine={false} axisLine={false} width={54} tickCount={4} tick={{ fontSize: 12 }}/>
             <ReferenceLine y={0} stroke="var(--line)"/>
             <Tooltip cursor={{ stroke: "var(--hairline)", strokeWidth: 1 }} content={({ active, payload }) => active && payload?.length ? <ChartTooltip point={payload[0].payload as MonthPoint}/> : null}/>
             {series.map((item) => "line" in item
-              ? <Line key={item.key} dataKey={item.key} stroke={item.color} strokeWidth={2} strokeLinecap="round" type="monotone" animationDuration={420} dot={{ r: 4, fill: item.color, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 6, fill: item.color, stroke: "var(--surface)", strokeWidth: 2 }}/>
-              : <Bar key={item.key} dataKey={item.key} fill={item.color} radius={[4, 4, 0, 0]} maxBarSize={22} animationDuration={420}/>)}
+              ? <Line key={item.key} dataKey={item.key} stroke={item.color} strokeWidth={1.5} strokeLinecap="round" type="monotone" animationDuration={420} dot={{ r: 3.5, fill: item.color, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: item.color, stroke: "var(--surface)", strokeWidth: 2 }}/>
+              : <Bar key={item.key} dataKey={item.key} fill={item.color} radius={[5, 5, 0, 0]} maxBarSize={10} animationDuration={420}>{data.map((point, index) => <Cell key={index} fillOpacity={item.key === "Einnahmen" && highlightLast && index < data.length - 1 ? .62 : 1}/>)}</Bar>)}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -45,12 +45,12 @@ export function MonthChart({ data, subtitle, loading }: { data: MonthPoint[]; su
 }
 
 function Swatch({ color, line }: { color: string; line?: boolean }) {
-  return <span aria-hidden className={line ? "h-0.5 w-4 rounded-full" : "h-2.5 w-2.5 rounded-[3px]"} style={{ background: color }}/>;
+  return <span aria-hidden className={line ? "h-[1.5px] w-4 rounded-full" : "h-2 w-2 rounded-full"} style={{ background: color }}/>;
 }
 
 function ChartTooltip({ point }: { point: MonthPoint }) {
-  return <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 text-sm shadow-[var(--shadow-overlay)]">
+  return <div className="overlay !rounded-[1.375rem] px-4 py-3 text-sm">
     <p className="font-semibold text-[var(--ink)]">{point.month}</p>
-    <ul className="mt-2 space-y-1.5">{series.map((item) => <li key={item.key} className="flex items-center justify-between gap-6"><span className="flex items-center gap-2 text-[var(--muted)]"><Swatch {...item}/>{item.key}</span><span className="money font-semibold text-[var(--ink)]">{formatCurrency(point[item.key])}</span></li>)}</ul>
+    <ul className="mt-2 space-y-1.5">{series.map((item) => <li key={item.key} className="flex items-center justify-between gap-6"><span className="flex items-center gap-2 text-[var(--muted)]"><Swatch color={item.color} line={"line" in item}/>{item.key}</span><span className="money font-semibold text-[var(--ink)]">{formatCurrency(point[item.key])}</span></li>)}</ul>
   </div>;
 }
