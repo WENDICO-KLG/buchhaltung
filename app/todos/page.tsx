@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { closestCorners, DndContext, DragOverlay, KeyboardSensor, PointerSensor, pointerWithin, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent, KeyboardCoordinateGetter } from "@dnd-kit/core";
-import { CalendarClock, Check, Circle, CircleCheck, ContactRound, GripVertical, LayoutPanelTop, LoaderCircle, MessageSquare, Plus, Search, Send, Trash2, UserRound, Users, X } from "lucide-react";
+import { CalendarClock, Check, Circle, CircleCheck, ContactRound, GripVertical, LoaderCircle, MessageSquare, Plus, Search, Send, Trash2, UserRound, Users, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createTodo, createTodoComment, deleteTodo, getCustomers, getProspects, getTodoComments, getTodos, updateTodo } from "@/lib/storage";
 import { todayKey } from "@/lib/utils";
 import { companyMemberName, currentCompanyId, getCompanyMembers } from "@/lib/company";
@@ -12,6 +14,8 @@ import type { CompanyMember } from "@/lib/company";
 import type { Customer, Prospect, Todo, TodoComment, TodoPriority, TodoStatus } from "@/types";
 import { Flag } from "lucide-react";
 import { compareTodoPriority, priorityLabels } from "@/lib/todo-priority";
+import { cn } from "@/lib/utils";
+import styles from "./todos.module.css";
 
 function PriorityOptions() { return <>{(Object.entries(priorityLabels) as [TodoPriority,string][]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</>; }
 
@@ -65,6 +69,8 @@ export default function TodosPage() {
   const [pending, setPending] = useState<string[]>([]);
   const [showAllDone, setShowAllDone] = useState(false);
   const [reload, setReload] = useState(0);
+  const [visibleColumn, setVisibleColumn] = useState(0);
+  const board = useRef<HTMLDivElement>(null);
   const pendingIds = useRef(new Set<string>());
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: boardCoordinates }));
 
@@ -146,31 +152,36 @@ export default function TodosPage() {
     .filter((todo) => linkFilter === "all" || (linkFilter === "" ? !todo.customerId && !todo.prospectId : linkFilter === (todo.customerId ? `customer:${todo.customerId}` : `prospect:${todo.prospectId}`)))
     .filter((todo) => `${todo.title} ${todo.notes ?? ""} ${relationName(todo) ?? ""}`.toLocaleLowerCase("de-CH").includes(search)).sort(compareTodos);
   const openCount = todos.filter((todo) => todo.status !== "done").length;
+  const overdueCount = todos.filter((todo) => matchesFocus(todo, "overdue", today)).length;
   const dragTodo = todos.find((todo) => todo.id === dragId);
   const hasFilters = focus !== "all" || Boolean(query) || linkFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all";
 
+  function showColumn(index: number) {
+    const viewport = board.current;
+    if (viewport) viewport.scrollTo({ left: (viewport.scrollWidth - viewport.clientWidth) * index / (statusOrder.length - 1) });
+  }
+
   return <WorkspaceShell active="To-Dos" title="Wendico / To-Dos">
-    <div className="todo-page page-enter pb-20">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><div className="flex items-center gap-2 text-xs font-semibold text-[var(--primary)]"><LayoutPanelTop size={15}/>Tagesgeschäft</div><h1 className="mt-2 text-3xl font-semibold">To-Dos</h1></div>
-        <button onClick={() => setEditor("new")} disabled={loading || loadFailed} className="primary gap-2 whitespace-nowrap"><Plus size={16}/>Aufgabe erstellen</button>
-      </div>
-      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-b border-[var(--line)] pb-5 text-sm text-[var(--muted)]">
-        <span><strong className="text-[var(--ink)]">{loading ? "–" : openCount}</strong> offen</span>
-        <span className={todos.some((todo) => matchesFocus(todo, "overdue", today)) ? "text-[var(--danger)]" : ""}><strong>{loading ? "–" : todos.filter((todo) => matchesFocus(todo, "overdue", today)).length}</strong> überfällig</span>
-        <span><strong className="text-[var(--ink)]">{loading ? "–" : todos.filter((todo) => matchesFocus(todo, "today", today)).length}</strong> heute fällig</span>
-      </div>
-      {error && <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--danger)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--danger)]">{error}{loadFailed && <button onClick={() => { setError(""); setLoadFailed(false); setLoading(true); setReload((current) => current + 1); }} className="action">Erneut laden</button>}</div>}
+    <div className="todo-page">
+      <PageHeader className="page-enter" title="To-Dos" subtitle={<span className="money flex flex-wrap gap-x-5 gap-y-1">
+        <span><strong className="font-semibold text-[var(--ink)]">{loading ? "–" : openCount}</strong> offen</span>
+        <span className={overdueCount ? "text-[var(--coral)]" : ""}><strong className="font-semibold">{loading ? "–" : overdueCount}</strong> überfällig</span>
+        <span><strong className="font-semibold text-[var(--ink)]">{loading ? "–" : todos.filter((todo) => matchesFocus(todo, "today", today)).length}</strong> heute fällig</span>
+      </span>} actions={<button onClick={() => setEditor("new")} disabled={loading || loadFailed} className="primary w-full whitespace-nowrap sm:w-auto"><Plus size={17}/>Aufgabe erstellen</button>}/>
+      {error && <div role="alert" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--coral)_40%,transparent)] bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)]">{error}{loadFailed && <button onClick={() => { setError(""); setLoadFailed(false); setLoading(true); setReload((current) => current + 1); }} className="action">Erneut laden</button>}</div>}
       <div className="sr-only" role="status" aria-live="polite">{notice}</div>
-      <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-end">
-        <label className="min-w-0 flex-1"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Suche</span><span className="relative block"><Search size={16} className="pointer-events-none absolute left-3 top-3.5 text-[var(--muted)]"/><input value={query} onChange={(event) => setQuery(event.target.value)} className="field pl-9" placeholder="Aufgabe oder Unternehmen"/></span></label>
-        <label className="lg:w-64"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Bezug</span><select value={linkFilter} onChange={(event) => setLinkFilter(event.target.value as LinkChoice | "all")} className="field"><option value="all">Alle Bezüge</option><LinkOptions customers={customers} prospects={prospects}/></select></label>
-        <label className="min-w-0 lg:w-64"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} className="field"><option value="all">Alle Mitglieder</option><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}</select></label>
+      <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
+        <label className="col-span-2 min-w-0 lg:col-span-1"><span className={fieldLabel}>Suche</span><span className="relative block"><Search size={17} strokeWidth={1.7} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"/><input value={query} onChange={(event) => setQuery(event.target.value)} className="field pl-9" placeholder="Aufgabe oder Unternehmen"/></span></label>
+        <label className="min-w-0"><span className={fieldLabel}>Bezug</span><select value={linkFilter} onChange={(event) => setLinkFilter(event.target.value as LinkChoice | "all")} className="field truncate"><option value="all">Alle Bezüge</option><LinkOptions customers={customers} prospects={prospects}/></select></label>
+        <label className="min-w-0"><span className={fieldLabel}>Verantwortlich</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} className="field truncate"><option value="all">Alle Mitglieder</option><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}</select></label>
+        <label className="col-span-2 min-w-0 lg:col-span-1"><span className={fieldLabel}><span className="sr-only">Priorität filtern</span><span aria-hidden>Priorität</span></span><select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value as TodoPriority | "all")} className="field truncate"><option value="all">Alle Prioritäten</option><PriorityOptions/></select></label>
       </div>
-      <div className="my-4 flex flex-wrap items-center gap-2" role="group" aria-label="Aufgabenfokus">
-        <label className="mr-2"><span className="sr-only">Priorität filtern</span><select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value as TodoPriority | "all")} className="field text-xs"><option value="all">Alle Prioritäten</option><PriorityOptions/></select></label>
+      <div className="mb-5 mt-4 flex flex-wrap items-center gap-1" role="group" aria-label="Aufgabenfokus">
         {(Object.keys(focusLabels) as Focus[]).map((value) => <button key={value} aria-pressed={focus === value} onClick={() => setFocus(value)} className={focus === value ? "filter-active" : "filter"}>{focusLabels[value]}{value !== "all" && <span className="ml-2 tabular-nums">{todos.filter((todo) => matchesFocus(todo, value, today)).length}</span>}</button>)}
-        {hasFilters && <button className="icon-button" title="Filter zurücksetzen" aria-label="Filter zurücksetzen" onClick={() => { setFocus("all"); setQuery(""); setLinkFilter("all"); setAssigneeFilter("all"); setPriorityFilter("all"); }}><X size={16}/></button>}
+        {hasFilters && <button className="icon-button" title="Filter zurücksetzen" aria-label="Filter zurücksetzen" onClick={() => { setFocus("all"); setQuery(""); setLinkFilter("all"); setAssigneeFilter("all"); setPriorityFilter("all"); }}><X size={17}/></button>}
+      </div>
+      <div className="mb-4 flex border-b border-[var(--line)] xl:hidden" role="group" aria-label="Statusspalte anzeigen">
+        {statusOrder.map((status, index) => <button key={status} type="button" aria-pressed={visibleColumn === index} onClick={() => showColumn(index)} className={cn("-mb-px min-h-11 flex-1 whitespace-nowrap border-b-2 px-1 text-sm transition-colors", visibleColumn === index ? "border-[var(--ink)] font-semibold text-[var(--ink)]" : "border-transparent font-medium text-[var(--muted)]")}>{statusLabels[status]}</button>)}
       </div>
       <DndContext sensors={sensors} collisionDetection={(args) => args.pointerCoordinates ? pointerWithin(args) : closestCorners(args)} onDragStart={({ active }) => setDragId(String(active.id))} onDragEnd={endDrag} onDragCancel={() => setDragId(null)} accessibility={{ screenReaderInstructions: { draggable: "Leertaste zum Aufnehmen. Mit den Pfeiltasten die Statusspalte wählen. Leertaste zum Ablegen, Escape zum Abbrechen." }, announcements: {
         onDragStart: ({ active }) => `Aufgabe ${todos.find((todo) => todo.id === active.id)?.title ?? ""} aufgenommen.`,
@@ -178,62 +189,71 @@ export default function TodosPage() {
         onDragEnd: ({ over }) => over ? `Abgelegt: ${statusLabels[over.id as TodoStatus]}.` : "Verschieben abgebrochen.",
         onDragCancel: () => "Verschieben abgebrochen.",
       } }}>
-        <div className="overflow-x-auto pb-3" role="region" aria-label="Aufgabenboard" tabIndex={0}>
-          <div className="grid grid-cols-[repeat(3,minmax(270px,1fr))] gap-4">
+        <div ref={board} onScroll={({ currentTarget: element }) => { const range = element.scrollWidth - element.clientWidth; if (range > 0) setVisibleColumn(Math.round(element.scrollLeft / range * (statusOrder.length - 1))); }} className={cn("-mx-4 overflow-x-auto px-4 pb-8 sm:mx-0 sm:px-0", styles.viewport, dragId && styles.dragging)} role="region" aria-label="Aufgabenboard" tabIndex={0}>
+          <div className={styles.board}>
             {statusOrder.map((status) => {
               const columnTodos = filtered.filter((todo) => todo.status === status);
               const displayed = status === "done" && !showAllDone ? columnTodos.slice(0, 10) : columnTodos;
               return <BoardColumn key={status} status={status} count={columnTodos.length} disabled={loading || loadFailed}>
-                {loading ? <div className="space-y-3" aria-label="Aufgaben werden geladen">{[0, 1, 2].map((index) => <div key={index} className="h-32 animate-pulse rounded-lg border border-[var(--line)] bg-[var(--surface)]"/>)}</div> : displayed.map((todo) => <TaskCard key={todo.id} todo={todo} relation={relationName(todo)} assignee={assigneeName(todo)} busy={pending.includes(todo.id)} onOpen={() => setEditor(todo)} onPriorityChange={(priority) => void setPriority(todo.id, priority)} onStatusChange={(next) => void setStatus(todo.id, next)} onDelete={() => { setError(""); void remove(todo).catch((cause) => setError(cause instanceof Error ? cause.message : "Aufgabe konnte nicht gelöscht werden.")); }}/>)}
-                {!loading && !loadFailed && !columnTodos.length && <p className="py-10 text-center text-xs text-[var(--muted)]">{hasFilters ? "Keine passenden Aufgaben" : status === "done" ? "Noch nichts erledigt" : status === "in_progress" ? "Keine Aufgabe in Bearbeitung" : "Keine offenen Aufgaben"}</p>}
-                {status === "done" && columnTodos.length > 10 && <button onClick={() => setShowAllDone(!showAllDone)} className="action w-full text-xs">{showAllDone ? "Weniger anzeigen" : `${columnTodos.length - 10} weitere anzeigen`}</button>}
+                {loading ? <div className="space-y-3" aria-label="Aufgaben werden geladen">{[0, 1, 2].map((index) => <Skeleton key={index} className="h-36 rounded-xl"/>)}</div> : displayed.map((todo) => <TaskCard key={todo.id} todo={todo} relation={relationName(todo)} assignee={assigneeName(todo)} busy={pending.includes(todo.id)} onOpen={() => setEditor(todo)} onPriorityChange={(priority) => void setPriority(todo.id, priority)} onStatusChange={(next) => void setStatus(todo.id, next)} onDelete={() => { setError(""); void remove(todo).catch((cause) => setError(cause instanceof Error ? cause.message : "Aufgabe konnte nicht gelöscht werden.")); }}/>)}
+                {!loading && !loadFailed && !columnTodos.length && <p className="py-14 text-center text-sm text-[var(--muted)]">{hasFilters ? "Keine passenden Aufgaben" : status === "done" ? "Noch nichts erledigt" : status === "in_progress" ? "Keine Aufgabe in Bearbeitung" : "Keine offenen Aufgaben"}</p>}
+                {status === "done" && columnTodos.length > 10 && <button onClick={() => setShowAllDone(!showAllDone)} className="action w-full">{showAllDone ? "Weniger anzeigen" : `${columnTodos.length - 10} weitere anzeigen`}</button>}
               </BoardColumn>;
             })}
           </div>
         </div>
-        <DragOverlay>{dragTodo && <div className="todo-page rounded-lg border border-[var(--primary)] bg-[var(--surface)] p-4 shadow-xl"><TaskSummary todo={dragTodo} relation={relationName(dragTodo)} assignee={assigneeName(dragTodo)}/></div>}</DragOverlay>
+        <DragOverlay>{dragTodo && <div className={cn("todo-page rounded-xl p-4", styles.ghost)}><TaskSummary showPriority todo={dragTodo} relation={relationName(dragTodo)} assignee={assigneeName(dragTodo)}/></div>}</DragOverlay>
       </DndContext>
       {editor !== null && <TaskDialog key={editor === "new" ? "new" : editor.id} todo={editor === "new" ? undefined : editor} customers={customers} prospects={prospects} members={members} onClose={() => setEditor(null)} onSave={save} onDelete={remove}/>}
     </div>
   </WorkspaceShell>;
 }
 
+const fieldLabel = "mb-1.5 block text-[13px] font-medium text-[var(--muted)]";
+
 function BoardColumn({ status, count, disabled, children }: { status: TodoStatus; count: number; disabled: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled });
   const Icon = statusIcons[status];
-  return <section ref={setNodeRef} aria-label={statusLabels[status]} className={`min-h-[360px] rounded-lg border-t-2 bg-[var(--surface-soft)] p-3 transition-colors ${isOver ? "border-[var(--primary)] ring-2 ring-[var(--primary)]" : status === "done" ? "border-[#17b26a]" : status === "in_progress" ? "border-[var(--primary)]" : "border-[var(--line)]"}`}>
-    <div className="mb-4 flex items-center gap-2 px-1"><Icon size={15} className={status === "done" ? "text-[#17b26a]" : "text-[var(--muted)]"}/><h2 className="text-sm font-semibold">{statusLabels[status]}</h2><span className="ml-auto text-xs tabular-nums text-[var(--muted)]">{count}</span></div>
-    <div className="space-y-3">{children}</div>
+  return <section ref={setNodeRef} aria-label={statusLabels[status]} className={cn("plate min-h-[360px] min-w-0 rounded-2xl p-2 sm:p-3", styles.column, isOver && styles.over)}>
+    <div className="mb-3 flex items-center gap-2.5 px-1.5 pb-1 pt-1.5"><Icon size={17} strokeWidth={1.7} className={status === "done" ? "text-[var(--emerald)]" : "text-[var(--muted)]"}/><h2 className="text-base font-semibold">{statusLabels[status]}</h2><span className="money ml-auto text-sm text-[var(--muted)]">{count}</span></div>
+    <div className="space-y-2.5">{children}</div>
   </section>;
 }
 
-function TaskSummary({ todo, relation, assignee }: { todo: Todo; relation?: string; assignee: string }) {
+function TaskSummary({ todo, relation, assignee, showPriority = false }: { todo: Todo; relation?: string; assignee: string; showPriority?: boolean }) {
   const overdue = Boolean(todo.dueDate && todo.dueDate < todayKey() && todo.status !== "done");
   const RelationIcon = todo.customerId ? Users : ContactRound;
   return <>
-    <p className="break-words text-sm font-semibold leading-6 [overflow-wrap:anywhere]">{todo.title}</p>
-    <span className={`mt-2 flex items-center gap-1 text-xs font-semibold ${todo.priority === "high" ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}><Flag size={12}/>{priorityLabels[todo.priority ?? "normal"]}</span>
-    {todo.notes && <p className="mt-2 line-clamp-2 break-words text-xs text-[var(--muted)] [overflow-wrap:anywhere]">{todo.notes}</p>}
-    <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-      {todo.dueDate && <span className={`flex items-center gap-1 ${overdue ? "font-semibold text-[var(--danger)]" : ""}`}><CalendarClock size={13}/>{todo.dueDate === todayKey() ? "Heute" : new Date(`${todo.dueDate}T12:00:00`).toLocaleDateString("de-CH")}{overdue && " · Überfällig"}</span>}
-      {relation && <span className="flex min-w-0 max-w-full items-center gap-1 text-[var(--primary)]"><RelationIcon size={13} className="shrink-0"/><span className="truncate" title={relation}>{relation}</span></span>}
-      <span className="flex min-w-0 max-w-full items-center gap-1"><UserRound size={13} className="shrink-0"/><span className="truncate" title={assignee}>{assignee}</span></span>
-    </div>
+    <span className={cn("block break-words text-base font-semibold leading-snug [overflow-wrap:anywhere]", todo.status === "done" && "font-medium text-[var(--muted)]")}>{todo.title}</span>
+    {showPriority && <span className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-[var(--muted)]"><PriorityFlag priority={todo.priority}/>{priorityLabels[todo.priority ?? "normal"]}</span>}
+    {todo.notes && <span className="mt-1.5 line-clamp-2 break-words text-sm text-[var(--muted)] [overflow-wrap:anywhere]">{todo.notes}</span>}
+    <span className="mt-3 flex flex-col gap-1.5 text-[13px] text-[var(--muted)]">
+      {todo.dueDate && <span className={cn("flex items-center gap-2", overdue ? "font-semibold text-[var(--coral)]" : todo.dueDate === todayKey() && "font-semibold text-[var(--ink)]")}><CalendarClock size={15} strokeWidth={1.7} className="shrink-0"/><span className="money">{todo.dueDate === todayKey() ? "Heute" : new Date(`${todo.dueDate}T12:00:00`).toLocaleDateString("de-CH")}{overdue && " · Überfällig"}</span></span>}
+      {relation && <span className="flex min-w-0 max-w-full items-center gap-2"><RelationIcon size={15} strokeWidth={1.7} className="shrink-0"/><span className="truncate text-[var(--ink)]" title={relation}>{relation}</span></span>}
+      <span className="flex min-w-0 max-w-full items-center gap-2"><UserRound size={15} strokeWidth={1.7} className="shrink-0"/><span className="truncate" title={assignee}>{assignee}</span></span>
+    </span>
   </>;
+}
+
+/** The fill carries the rank, so it never depends on colour. */
+function PriorityFlag({ priority = "normal" }: { priority?: TodoPriority }) {
+  return <Flag aria-hidden size={14} strokeWidth={1.8} fill={priority === "high" ? "currentColor" : "none"} className={cn("shrink-0", priority === "high" ? "text-[var(--ink)]" : priority === "low" && "opacity-60")}/>;
 }
 
 function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange, onPriorityChange, onDelete }: { todo: Todo; relation?: string; assignee: string; busy: boolean; onOpen: () => void; onStatusChange: (status: TodoStatus) => void; onPriorityChange: (priority: TodoPriority) => void; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: todo.id, disabled: busy });
-  return <article ref={setNodeRef} aria-busy={busy} className={`rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm ${isDragging ? "opacity-30" : ""}`}>
-    <div className="flex items-start gap-1">
-      <button onClick={onOpen} disabled={busy} className="min-w-0 flex-1 rounded text-left hover:text-[var(--primary)]" aria-label={`Aufgabe öffnen: ${todo.title}`}><TaskSummary todo={todo} relation={relation} assignee={assignee}/></button>
-      <button ref={setActivatorNodeRef} {...attributes} {...listeners} disabled={busy} className="icon-button shrink-0 touch-none cursor-grab active:cursor-grabbing" title="Aufgabe verschieben" aria-label={`Aufgabe verschieben: ${todo.title}`}><GripVertical size={17}/></button>
+  return <article ref={setNodeRef} aria-busy={busy} className={cn("rounded-xl", styles.card, isDragging && styles.lifted)}>
+    <div className="flex items-start gap-1 p-2 pb-3 pl-4">
+      <button onClick={onOpen} disabled={busy} className="min-w-0 flex-1 rounded pt-1.5 text-left" aria-label={`Aufgabe öffnen: ${todo.title}`}><TaskSummary todo={todo} relation={relation} assignee={assignee}/></button>
+      <button ref={setActivatorNodeRef} {...attributes} {...listeners} disabled={busy} className="icon-button shrink-0 touch-none cursor-grab active:cursor-grabbing" title="Aufgabe verschieben" aria-label={`Aufgabe verschieben: ${todo.title}`}><GripVertical size={18} strokeWidth={1.6}/></button>
     </div>
-    <label className="mt-3 block"><span className="sr-only">Priorität: {todo.title}</span><select value={todo.priority ?? "normal"} disabled={busy} onChange={(event) => onPriorityChange(event.target.value as TodoPriority)} className="field text-xs"><PriorityOptions/></select></label>
-    <div className="mt-3 flex items-center gap-2 border-t border-[var(--line)] pt-2">
-      <select value={todo.status} disabled={busy} onChange={(event) => onStatusChange(event.target.value as TodoStatus)} aria-label={`Status: ${todo.title}`} className="min-h-8 min-w-0 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--muted)]">{statusOrder.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
-      <button type="button" onClick={onDelete} disabled={busy} className="icon-button shrink-0 text-[var(--danger)]" title="Aufgabe löschen" aria-label={`Aufgabe löschen: ${todo.title}`}><Trash2 size={16}/></button>
-      {busy && <LoaderCircle size={14} className="animate-spin text-[var(--primary)]" aria-label="Wird gespeichert"/>}
+    <div className="flex items-center border-t border-[var(--line)] px-2 py-1">
+      <select value={todo.status} disabled={busy} onChange={(event) => onStatusChange(event.target.value as TodoStatus)} aria-label={`Status: ${todo.title}`} className={styles.quiet}>{statusOrder.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
+      <label className="flex min-w-0 items-center pl-1.5 text-[var(--muted)]"><span className="sr-only">Priorität: {todo.title}</span><PriorityFlag priority={todo.priority}/><select value={todo.priority ?? "normal"} disabled={busy} onChange={(event) => onPriorityChange(event.target.value as TodoPriority)} className={cn(styles.quiet, todo.priority === "high" && styles.strong)}><PriorityOptions/></select></label>
+      <span className="ml-auto flex items-center">
+        {busy && <LoaderCircle size={15} className="animate-spin text-[var(--muted)]" aria-label="Wird gespeichert"/>}
+        <button type="button" onClick={onDelete} disabled={busy} className="icon-button shrink-0 hover:text-[var(--coral)]" title="Aufgabe löschen" aria-label={`Aufgabe löschen: ${todo.title}`}><Trash2 size={17} strokeWidth={1.6}/></button>
+      </span>
     </div>
   </article>;
 }
@@ -274,25 +294,29 @@ function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDe
   }
   const selectedLinkMissing = Boolean(link && !(link.startsWith("customer:") ? customers.some((customer) => `customer:${customer.id}` === link) : prospects.some((prospect) => `prospect:${prospect.id}` === link)));
 
-  return <dialog ref={dialog} aria-labelledby="task-dialog-title" onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }} className="todo-dialog m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 text-[var(--ink)] shadow-xl sm:p-6">
-    <div className="mb-5 flex items-center justify-between gap-3"><h2 id="task-dialog-title" className="text-lg font-semibold">{todo ? "Aufgabe bearbeiten" : "Aufgabe erstellen"}</h2><button onClick={onClose} disabled={busy} className="icon-button" title="Schließen" aria-label="Schließen"><X size={18}/></button></div>
-    {error && <p role="alert" className="mb-4 text-sm text-[var(--danger)]">{error}</p>}
+  return <dialog ref={dialog} aria-labelledby="task-dialog-title" onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }} className={cn("todo-dialog overlay m-auto max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto overscroll-contain rounded-2xl text-[var(--ink)]", todo ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl", styles.dialog)}>
+    <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--chrome-solid)] py-3 pl-5 pr-3 sm:pl-7 sm:pr-4"><h2 id="task-dialog-title" className="text-xl font-semibold">{todo ? "Aufgabe bearbeiten" : "Aufgabe erstellen"}</h2><button onClick={onClose} disabled={busy} className="header-icon-button" title="Schließen" aria-label="Schließen"><X size={20}/></button></div>
+    <div className={cn(todo && "lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]")}>
+    <div className="p-5 sm:p-7">
+    {error && <p role="alert" className="mb-5 rounded-xl bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)]">{error}</p>}
     <form onSubmit={submit}>
       <fieldset disabled={busy} className="grid min-w-0 gap-4 sm:grid-cols-2">
-        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Aufgabe</span><input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} className="field"/></label>
-        <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Status</span><select value={status} onChange={(event) => setStatus(event.target.value as TodoStatus)} className="field">{statusOrder.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
-        <label><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Fällig am (optional)</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="field"/></label>
-        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Priorität</span><select value={priority} onChange={(event) => setPriority(event.target.value as TodoPriority)} className="field"><PriorityOptions/></select></label>
-        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Verantwortlich (optional)</span><select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)} className="field"><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}{assigneeId && !members.some((member) => member.user_id === assigneeId) && <option value={assigneeId} disabled>Mitglied nicht mehr verfügbar</option>}</select></label>
-        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Kunde / Prospect (optional)</span><select value={link} onChange={(event) => setLink(event.target.value as LinkChoice)} className="field"><LinkOptions customers={customers} prospects={prospects}/>{selectedLinkMissing && <option value={link}>Bestehender Bezug (nicht verfügbar)</option>}</select></label>
-        <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Notizen (optional)</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="field resize-y"/></label>
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
-          {todo ? <button type="button" onClick={remove} className="icon-button text-[var(--danger)]" title="Aufgabe löschen" aria-label="Aufgabe löschen"><Trash2 size={17}/></button> : <span/>}
+        <label className="sm:col-span-2"><span className={fieldLabel}>Aufgabe</span><input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} className="field"/></label>
+        <label className="min-w-0"><span className={fieldLabel}>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as TodoStatus)} className="field">{statusOrder.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
+        <label className="min-w-0"><span className={fieldLabel}>Fällig am (optional)</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="field"/></label>
+        <label className="min-w-0"><span className={fieldLabel}>Priorität</span><select value={priority} onChange={(event) => setPriority(event.target.value as TodoPriority)} className="field"><PriorityOptions/></select></label>
+        <label className="min-w-0"><span className={fieldLabel}>Verantwortlich (optional)</span><select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)} className="field"><option value="">Nicht zugewiesen</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{companyMemberName(member)}</option>)}{assigneeId && !members.some((member) => member.user_id === assigneeId) && <option value={assigneeId} disabled>Mitglied nicht mehr verfügbar</option>}</select></label>
+        <label className="sm:col-span-2"><span className={fieldLabel}>Kunde / Prospect (optional)</span><select value={link} onChange={(event) => setLink(event.target.value as LinkChoice)} className="field"><LinkOptions customers={customers} prospects={prospects}/>{selectedLinkMissing && <option value={link}>Bestehender Bezug (nicht verfügbar)</option>}</select></label>
+        <label className="sm:col-span-2"><span className={fieldLabel}>Notizen (optional)</span><textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} className="field resize-y"/></label>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 sm:col-span-2">
+          {todo ? <button type="button" onClick={remove} className="header-icon-button text-[var(--coral)]" title="Aufgabe löschen" aria-label="Aufgabe löschen"><Trash2 size={17}/></button> : <span/>}
           <div className="flex gap-2"><button type="button" onClick={onClose} className="action">Abbrechen</button><button disabled={!title.trim()} className="primary gap-2 whitespace-nowrap">{busy ? <LoaderCircle size={16} className="animate-spin"/> : <Check size={16}/>}Speichern</button></div>
         </div>
       </fieldset>
     </form>
+    </div>
     {todo && <Comments todoId={todo.id}/>}
+    </div>
   </dialog>;
 }
 
@@ -317,13 +341,13 @@ function Comments({ todoId }: { todoId: string }) {
     catch (cause) { setError(cause instanceof Error ? cause.message : "Kommentar konnte nicht gespeichert werden."); }
     finally { setBusy(false); }
   }
-  return <section className="mt-6 border-t border-[var(--line)] pt-5" aria-label="Kommentare">
-    <h3 className="flex items-center gap-2 text-sm font-semibold"><MessageSquare size={15}/>Kommentare <span className="text-xs text-[var(--muted)]">{comments.length}</span></h3>
-    {error && <div role="alert" className="mt-3 flex items-center justify-between gap-2 text-xs text-[var(--danger)]">{error}<button onClick={() => { setError(""); setLoading(true); setRetry((current) => current + 1); }} className="action text-xs">Erneut laden</button></div>}
-    <div className="my-3 max-h-48 space-y-3 overflow-y-auto">
-      {loading ? <p className="text-xs text-[var(--muted)]">Kommentare werden geladen...</p> : !comments.length && !error ? <p className="text-xs text-[var(--muted)]">Noch keine Kommentare.</p> : null}
-      {comments.map((comment) => <div key={comment.id} className="border-l-2 border-[var(--line)] pl-3"><p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{comment.body}</p><p className="mt-1 text-xs text-[var(--muted)]">{new Date(comment.createdAt).toLocaleString("de-CH")}</p></div>)}
+  return <section className="flex min-h-0 flex-col border-t border-[var(--line)] p-5 sm:p-7 lg:border-l lg:border-t-0" aria-label="Kommentare">
+    <h3 className="flex items-center gap-2.5 text-base font-semibold"><MessageSquare size={17} strokeWidth={1.7} className="text-[var(--muted)]"/>Kommentare <span className="money text-sm font-normal text-[var(--muted)]">{comments.length}</span></h3>
+    {error && <div role="alert" className="mt-3 flex items-center justify-between gap-2 text-sm text-[var(--coral)]">{error}<button onClick={() => { setError(""); setLoading(true); setRetry((current) => current + 1); }} className="action">Erneut laden</button></div>}
+    <div className="my-4 max-h-64 divide-y divide-[var(--line)] overflow-y-auto lg:max-h-[19rem] lg:flex-1">
+      {loading ? <p className="text-sm text-[var(--muted)]">Kommentare werden geladen...</p> : !comments.length && !error ? <p className="text-sm text-[var(--muted)]">Noch keine Kommentare.</p> : null}
+      {comments.map((comment) => <div key={comment.id} className="py-3 first:pt-0"><p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{comment.body}</p><p className="money mt-1 text-[13px] text-[var(--muted)]">{new Date(comment.createdAt).toLocaleString("de-CH")}</p></div>)}
     </div>
-    <form onSubmit={submit}><label htmlFor="task-comment" className="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Kommentar</label><div className="flex items-start gap-2"><textarea id="task-comment" rows={2} value={body} disabled={busy} onChange={(event) => setBody(event.target.value)} className="field min-w-0 flex-1 resize-y"/><button disabled={busy || !body.trim()} className="primary min-h-11 px-3" title="Kommentar senden" aria-label="Kommentar senden">{busy ? <LoaderCircle size={16} className="animate-spin"/> : <Send size={16}/>}</button></div></form>
+    <form onSubmit={submit}><label htmlFor="task-comment" className={fieldLabel}>Kommentar</label><div className="flex items-end gap-2"><textarea id="task-comment" rows={2} value={body} disabled={busy} onChange={(event) => setBody(event.target.value)} className="field min-w-0 flex-1 resize-y"/><button disabled={busy || !body.trim()} className="action min-w-11 px-3" title="Kommentar senden" aria-label="Kommentar senden">{busy ? <LoaderCircle size={17} className="animate-spin"/> : <Send size={17}/>}</button></div></form>
   </section>;
 }
