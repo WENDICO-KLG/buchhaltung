@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, Plus, ReceiptText, Repeat, Trash2 } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Stat } from "@/components/ui/stat";
+import { Amount, Stat } from "@/components/ui/stat";
 import { createExpense, deleteExpense, getCustomers, getExpenses, updateExpense } from "@/lib/storage";
 import { addMonths, formatCurrency, monthKeysBetween, recurringExpenseMonthlyAmount, todayKey } from "@/lib/utils";
 import type { Customer, Expense, RecurringInterval } from "@/types";
@@ -133,7 +132,7 @@ export default function ExpensesPage() {
     <section className="raised mt-5 overflow-hidden" aria-busy={loading}>
       <div className="grid gap-8 p-6 md:p-9 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-12">
         <div className="flex min-w-0 flex-col justify-between gap-8">
-          <Stat size="lg" label={filterMode === "customer" ? "Ausgaben bis heute" : "Ausgaben im Zeitraum"} value={loading ? "–" : <CountUp value={total} format={formatCurrency}/>} hint={loading ? undefined : `${filteredExpenses.length} ${filteredExpenses.length === 1 ? "Position" : "Positionen"}`}/>
+          <Stat size="lg" label={filterMode === "customer" ? "Ausgaben bis heute" : "Ausgaben im Zeitraum"} value={loading ? "–" : <Amount value={total}/>} hint={loading ? undefined : `${filteredExpenses.length} ${filteredExpenses.length === 1 ? "Position" : "Positionen"}`}/>
           <div className="border-t border-[var(--line)] pt-5"><Stat label="Wiederkehrend im Monat" value={loading ? "–" : formatCurrency(recurringMonthlyTotal)}/></div>
         </div>
         <MonthBars data={chart} selected={filterMode === "month" ? filterMonth : undefined} onSelect={(key) => { setFilterMode("month"); setFilterMonth(key); }}/>

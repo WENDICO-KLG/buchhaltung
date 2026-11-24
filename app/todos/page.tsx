@@ -249,7 +249,7 @@ function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange, onPr
       <button onClick={onOpen} disabled={busy} className="min-w-0 flex-1 rounded-lg pt-1.5 text-left" aria-label={`Aufgabe öffnen: ${todo.title}`}><TaskSummary todo={todo} relation={relation} assignee={assignee}/></button>
       <button ref={setActivatorNodeRef} {...attributes} {...listeners} disabled={busy} className={cn("icon-button shrink-0 touch-none cursor-grab active:cursor-grabbing", styles.plain)} title="Aufgabe verschieben" aria-label={`Aufgabe verschieben: ${todo.title}`}><GripVertical size={17} strokeWidth={1.6}/></button>
     </div>
-    <div className="mx-3 flex items-center border-t border-[var(--line)] py-1.5">
+    <div className="mx-3 flex flex-wrap items-center border-t border-[var(--line)] py-1.5">
       <select value={todo.status} disabled={busy} onChange={(event) => onStatusChange(event.target.value as TodoStatus)} aria-label={`Status: ${todo.title}`} className={styles.quiet}>{statusOrder.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
       <label className="flex min-w-0 items-center pl-1.5 text-[var(--muted)]"><span className="sr-only">Priorität: {todo.title}</span><PriorityFlag priority={todo.priority}/><select value={todo.priority ?? "normal"} disabled={busy} onChange={(event) => onPriorityChange(event.target.value as TodoPriority)} className={cn(styles.quiet, todo.priority === "high" && styles.strong)}><PriorityOptions/></select></label>
       <span className="ml-auto flex items-center">

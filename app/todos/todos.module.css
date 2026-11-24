@@ -1,5 +1,5 @@
 .board { display: grid; grid-template-columns: repeat(3, minmax(86%, 1fr)); gap: 1rem; min-width: 0; }
-@media (min-width: 640px) { .board { grid-template-columns: repeat(3, minmax(19rem, 1fr)); } }
+@media (min-width: 640px) { .board { grid-template-columns: repeat(3, minmax(20.5rem, 1fr)); } }
 .viewport { position: relative; scroll-snap-type: x proximity; scroll-padding-inline: 1rem; scroll-behavior: smooth; scrollbar-width: none; }
 .viewport::-webkit-scrollbar { display: none; }
 .viewport > .board > * { scroll-snap-align: start; }
@@ -33,7 +33,7 @@
 .card .plain:hover::before, .card .plain:focus-visible::before { opacity: 1; }
 
 /* Quiet selects inside a card: text until you reach for them. */
-.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: 999px; background-color: transparent; padding: 0 1.5rem 0 .6rem !important; color: var(--muted); font-size: .8125rem; font-weight: 400; background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50% !important; background-size: 4px 4px !important; transition: color .16s var(--ease-out), background-color .16s var(--ease-out); text-overflow: ellipsis; }
+.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: 999px; background-color: transparent; padding: 0 1.3rem 0 .5rem !important; color: var(--muted); font-size: .8125rem; font-weight: 400; background-position: calc(100% - 10px) 50%, calc(100% - 6px) 50% !important; background-size: 4px 4px !important; transition: color .16s var(--ease-out), background-color .16s var(--ease-out); text-overflow: ellipsis; }
 .card select.quiet:hover { background-color: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
 .card select.strong { color: var(--ink); font-weight: 500; }
 @media (pointer: coarse) { .card select.quiet { min-height: 2.75rem; } }

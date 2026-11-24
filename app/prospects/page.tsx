@@ -135,16 +135,16 @@ function ProspectRow({ prospect, onEdit, onRemove }: { prospect: Prospect; onEdi
       {prospect.notes && <p className="mt-1.5 line-clamp-2 text-[13px] text-[var(--muted)]">{prospect.notes}</p>}
     </div>
     <div className="text-right xl:order-4"><p className={`money font-medium ${prospect.estimatedValue == null ? "text-[var(--muted)]" : ""}`}>{prospect.estimatedValue != null ? formatCurrency(prospect.estimatedValue) : "-"}</p></div>
-    <div className="col-span-2 min-w-0 text-sm max-xl:col-start-1 xl:order-2 xl:col-span-1">
+    <div className="min-w-0 text-sm max-xl:col-start-1 max-xl:row-start-2 xl:order-2">
       <p className={prospect.nextTask ? "" : "text-[var(--muted)]"}>{prospect.nextTask || "Keine Aufgabe"}</p>
       {prospect.nextTaskAt && <p className={`money mt-0.5 ${overdue ? "font-medium text-[var(--coral)]" : "text-[var(--muted)]"}`}>{overdue ? "Überfällig seit " : ""}{formatDate(prospect.nextTaskAt)}</p>}
       <p className="money mt-0.5 text-[13px] text-[var(--muted)]">{prospect.lastContactAt ? `Letzter Kontakt ${formatDate(prospect.lastContactAt)}` : formatDate()}</p>
     </div>
-    <div className="col-span-2 flex min-w-0 gap-2 text-sm text-[var(--muted)] max-xl:col-start-1 max-xl:row-start-3 max-xl:pr-24 xl:order-3 xl:col-span-1 xl:block xl:space-y-1">
-      {prospect.email && <a href={`mailto:${prospect.email}`} className={styles.contact}><Mail aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span className="truncate">{prospect.email}</span></a>}
-      {prospect.phone && <a href={`tel:${prospect.phone}`} className={`${styles.contact} money`}><Phone aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span className="truncate">{prospect.phone}</span></a>}
+    <div className="min-w-0 text-sm text-[var(--muted)] max-xl:col-span-2 max-xl:col-start-1 max-xl:row-start-3 xl:order-3 xl:space-y-1">
+      {prospect.email && <a href={`mailto:${prospect.email}`} className={styles.contact}><Mail aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span>{prospect.email}</span></a>}
+      {prospect.phone && <a href={`tel:${prospect.phone}`} className={`${styles.contact} money`}><Phone aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span>{prospect.phone}</span></a>}
     </div>
-    <div className="flex justify-end gap-2 max-xl:col-start-2 max-xl:row-start-3 max-xl:self-center xl:order-5 xl:-mt-1.5">
+    <div className="flex justify-end gap-2 max-xl:col-start-2 max-xl:row-start-2 max-xl:self-center xl:order-5 xl:-mt-1.5">
       <button onClick={onEdit} aria-label="Prospect bearbeiten" title={`${prospect.companyName} bearbeiten`} className="icon-button"><Pencil size={15} strokeWidth={1.6}/></button>
       <button onClick={onRemove} aria-label="Prospect löschen" title={`${prospect.companyName} löschen`} className="icon-button hover:!text-[var(--coral)]"><Trash2 size={15} strokeWidth={1.6}/></button>
     </div>

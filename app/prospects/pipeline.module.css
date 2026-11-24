@@ -14,10 +14,8 @@
 .empty .value { color: var(--muted); font-weight: 400; }
 .stage[aria-pressed="true"] .label, .stage[aria-pressed="true"] .value { color: var(--active-ink); }
 
-/* Mail and phone: text on desktop, round buttons on phones. */
+/* Mail and phone: always readable, a full touch target on phones and tablets. */
 .contact { display: flex; min-width: 0; align-items: center; gap: .5rem; transition: color .18s var(--ease-out); }
 .contact:hover { color: var(--ink); }
-@media (max-width: 1279px) {
-  .contact { width: 2.75rem; height: 2.75rem; flex: none; justify-content: center; border-radius: 50%; background: var(--glass-round); box-shadow: var(--edge-shadow); color: var(--ink); }
-  .contact > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
+.contact > span { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 1279px) { .contact { min-height: 2.75rem; width: fit-content; max-width: 100%; color: var(--ink); } }

@@ -10,3 +10,5 @@
 .month { min-height: 2.5rem; min-width: 0; border: 0; background: transparent; padding: 0 .25rem; color: var(--ink); text-align: center; font-size: .875rem; font-weight: 500; }
 .month::-webkit-calendar-picker-indicator { margin-inline-start: .25rem; opacity: .55; cursor: pointer; }
 .month::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+@media (pointer: coarse) { .month { min-height: 2.75rem; } }
+:global(.light) .far { color: var(--muted); }

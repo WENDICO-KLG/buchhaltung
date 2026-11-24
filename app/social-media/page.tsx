@@ -4,12 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Plus, Save, Share2, Trash2, X } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Stat } from "@/components/ui/stat";
+import { Amount, Stat } from "@/components/ui/stat";
 import { canAccessPage, getActiveCompany } from "@/lib/company";
 import { deleteSocialMediaOrder, getSocialMediaOrders, saveSocialMediaOrder, setSocialMediaOrderPaid } from "@/lib/storage";
 import { socialMediaMonthSummary } from "@/lib/social-media";
@@ -69,7 +68,7 @@ export default function SocialMediaPage() {
         <div className="p-6 md:p-9">
           <div className="flex flex-wrap-reverse items-start justify-between gap-x-6 gap-y-7">
             <h2 className="sr-only">{monthLabel(month)}</h2>
-            <Stat size="lg" label="Noch auszuzahlen" value={blank ? "–" : <CountUp value={summary.open} format={formatCurrency}/>}/>
+            <Stat size="lg" label="Noch auszuzahlen" value={blank ? "–" : <Amount value={summary.open}/>}/>
             <div className="pill-track w-full sm:w-auto">
               <button className="icon-button" title="Vorheriger Monat" aria-label="Vorheriger Monat" disabled={month === "1900-01"} onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft size={17} strokeWidth={1.6}/></button>
               <label className="min-w-0 flex-1 sm:flex-none"><span className="sr-only">Monat</span><input type="month" min="1900-01" max="9999-12" value={month} className="money min-h-10 w-full min-w-0 rounded-full bg-transparent px-3 text-center text-sm font-medium text-[var(--ink)] focus-visible:-outline-offset-2 pointer-coarse:min-h-11 sm:w-48" onChange={(event) => { if (/^\d{4}-\d{2}$/.test(event.target.value) && event.target.value >= "1900-01" && event.target.value <= "9999-12") setMonth(event.target.value); }}/></label>

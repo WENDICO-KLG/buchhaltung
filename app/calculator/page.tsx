@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import { Handshake } from "lucide-react";
 import { Calculator } from "@/components/calculator";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Stat } from "@/components/ui/stat";
+import { Amount, Stat } from "@/components/ui/stat";
 import { companyMemberName, getActiveCompany, getCommissionCustomers, getCompanyMembers, setCustomerCommission } from "@/lib/company";
 import type { CommissionCustomer, CompanyMember, CompanyMembership } from "@/lib/company";
 import { commissionBreakdown } from "@/lib/calculator";
@@ -61,11 +60,11 @@ export default function CalculatorPage() {
   }
   function customerRow(customer: CommissionCustomer, base: number, bonus: number, total: number, closes?: number) {
     const pending = busy === customer.customer_id;
-    return <article key={customer.customer_id} aria-busy={pending} className="grid min-w-0 gap-x-6 gap-y-4 px-5 py-5 md:px-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,.9fr)_minmax(0,1.15fr)_minmax(0,1.1fr)] lg:items-center">
-      <div className="min-w-0"><h4 className="break-words font-semibold leading-snug [overflow-wrap:anywhere]">{customer.company_name}</h4><p className="mt-1 text-[13px] text-[var(--muted)]">{customer.payment_date ? new Date(`${customer.payment_date}T12:00:00`).toLocaleDateString("de-CH") : "Ohne Abschlussdatum"}</p><p className="mt-2 flex items-baseline justify-between gap-3 text-sm lg:block"><span className="text-[var(--muted)]">Einmaliger Umsatz </span><span className="money whitespace-nowrap font-semibold">{formatCurrency(Number(customer.amount))}</span></p></div>
+    return <article key={customer.customer_id} aria-busy={pending} className="grid min-w-0 gap-x-6 gap-y-4 px-5 py-5 md:grid-cols-2 md:px-7 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,.9fr)_minmax(0,1.15fr)_minmax(0,1.1fr)] xl:items-center">
+      <div className="min-w-0"><h4 className="break-words font-semibold leading-snug [overflow-wrap:anywhere]">{customer.company_name}</h4><p className="mt-1 text-[13px] text-[var(--muted)]">{customer.payment_date ? new Date(`${customer.payment_date}T12:00:00`).toLocaleDateString("de-CH") : "Ohne Abschlussdatum"}</p><p className="mt-2 flex items-baseline justify-between gap-3 text-sm xl:block"><span className="text-[var(--muted)]">Einmaliger Umsatz </span><span className="money whitespace-nowrap font-semibold">{formatCurrency(Number(customer.amount))}</span></p></div>
       <div className="min-w-0">{manage ? <label className="block min-w-0"><span className="mb-2 block text-[13px] text-[var(--muted)]">Mitarbeiter<span className="sr-only"> für {customer.company_name}</span></span><select value={customer.member_id ?? ""} disabled={Boolean(busy)} onChange={(event)=>void assign(customer,event.target.value)} className="field text-sm"><option value="">Nicht zugeteilt</option>{members.filter((person)=>person.role!=="viewer").map((person)=><option key={person.user_id} value={person.user_id}>{companyMemberName(person)}</option>)}</select></label> : <div><p className="text-[13px] text-[var(--muted)]">Mitarbeiter</p><p className="mt-1 break-words text-sm font-semibold">{customer.member_name ?? "Nicht zugeteilt"}</p></div>}</div>
       <dl className="grid min-w-0 gap-1.5 text-sm">{([["Grundprovision · 10 %", base], ["Monatsbonus", bonus]] as const).map(([label, value]) => <div key={label} className="flex items-baseline justify-between gap-3"><dt className="text-[var(--muted)]">{label}{label === "Monatsbonus" && bonus > 0 && <span title="Monatsbonus erreicht" className="ml-2 inline-flex items-center gap-1.5 text-[var(--ink)]"><span aria-hidden className="dot dot-on"/>+50 %</span>}</dt><dd className="money whitespace-nowrap font-semibold">{formatCurrency(value)}</dd></div>)}</dl>
-      <div className="min-w-0 border-t border-[var(--line)] pt-4 lg:border-0 lg:pt-0 lg:text-right"><div className="flex items-baseline justify-between gap-3 lg:block"><p className="text-[13px] text-[var(--muted)]">Gesamtprovision</p><p className="money mt-1 whitespace-nowrap text-xl font-medium tracking-tight">{formatCurrency(total)}</p></div>
+      <div className="min-w-0 border-t border-[var(--line)] pt-4 xl:border-0 xl:pt-0 xl:text-right"><div className="flex items-baseline justify-between gap-3 xl:block"><p className="text-[13px] text-[var(--muted)]">Gesamtprovision</p><p className="money mt-1 whitespace-nowrap text-xl font-medium tracking-tight">{formatCurrency(total)}</p></div>
         <p className="mt-1.5 text-balance text-[13px] text-[var(--muted)]">{pending ? "Zuordnung wird gespeichert..." : closes !== undefined && customer.member_id ? `${closes} Abschlüsse im Monat${closes < 3 ? ` · noch ${3 - closes} bis zum Bonus` : " · Bonus erreicht"}` : !customer.payment_date ? "Außerhalb der Zeitraumssumme" : "Noch keinem Mitarbeiter zugeteilt"}</p>
         {!pending && closes !== undefined && customer.member_id && closes < 3 && <ProgressBar className="mt-2.5" value={closes} max={3} label="Abschlüsse bis zum Monatsbonus"/>}</div>
     </article>;
@@ -80,7 +79,7 @@ export default function CalculatorPage() {
       </div>
       {invalid && <p role="alert" className="mt-4 text-sm text-[var(--coral)]">Bitte einen gültigen Zeitraum auswählen.</p>}{error && <p role="alert" className="mt-4 text-sm text-[var(--coral)]">{error}</p>}{notice && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-[var(--ink)]"><span aria-hidden className="dot dot-on"/>{notice}</p>}
       <div className="panel mt-5 overflow-hidden">
-        <div className="p-6 md:p-9"><Stat size="lg" tone="positive" label="Gesamte Provision" value={loading ? "–" : <CountUp value={sums.total} format={formatCurrency}/>}/>
+        <div className="p-6 md:p-9"><Stat size="lg" tone="positive" label="Gesamte Provision" value={loading ? "–" : <Amount value={sums.total}/>}/>
           <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-6 border-t border-[var(--line)] pt-6 sm:grid-cols-3 [&_.money]:whitespace-nowrap max-sm:[&_.money]:text-xl"><Stat label="Grundprovision · 10 %" value={loading ? "–" : formatCurrency(sums.base)}/><Stat label="Monatsbonus" value={loading ? "–" : formatCurrency(sums.bonus)}/><Stat label="Abschlüsse" value={loading ? "–" : rows.filter((row)=>row.member_id && Number(row.amount)>0).length}/></div></div>
       </div>
       <div className="panel mt-5 overflow-hidden"><div className="flex items-baseline justify-between gap-3 px-5 pb-4 pt-6 md:px-7"><h3 className="text-base font-semibold">Kunden im Zeitraum</h3><span className="text-[13px] text-[var(--muted)]">{rows.length} Kunden</span></div>
