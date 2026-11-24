@@ -5,7 +5,6 @@ import { Pencil, Plus, ReceiptText, Repeat, Trash2 } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Guilloche } from "@/components/ui/guilloche";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Stat } from "@/components/ui/stat";
@@ -105,36 +104,34 @@ export default function ExpensesPage() {
 
   return <WorkspaceShell active="Ausgaben" title="Wendico / Ausgaben"><div className="page-enter">
     <PageHeader title="Ausgaben" subtitle="Kosten nach Zeitraum und Kunde überblicken." actions={<button onClick={() => { reset(); setOpen(true); }} className="primary w-full sm:w-auto"><Plus size={17}/>Ausgabe erfassen</button>}/>
-    {error && <div role="alert" className="mt-6 rounded-xl border border-[color-mix(in_srgb,var(--coral)_40%,transparent)] bg-[var(--coral-soft)] px-4 py-3 text-sm text-[var(--coral)]">{error}</div>}
+    {error && <div role="alert" className="tile mt-6 flex items-center gap-3 px-5 py-3.5 text-sm text-[var(--coral)]"><span aria-hidden className="dot dot-off"/>{error}</div>}
 
-    {open && <form ref={formRef} onSubmit={submit} className="raised mt-6 scroll-mt-24 scroll-mb-24 rounded-2xl p-5 md:p-7">
-      <h2 className="text-lg font-semibold">{editingId ? "Ausgabe bearbeiten" : "Neue Ausgabe"}</h2>
-      <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+    {open && <form ref={formRef} onSubmit={submit} className="panel mt-6 scroll-mt-24 scroll-mb-24 p-6 md:p-7">
+      <div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold">{editingId ? "Ausgabe bearbeiten" : "Neue Ausgabe"}</h2><label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13px] text-[var(--muted)]">Wiederkehrend<input type="checkbox" className="switch" checked={form.isRecurring} onChange={(event) => setFormValue("isRecurring", event.target.checked)}/></label></div>
+      <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
         <Field label="Lieferant" value={form.vendor} required onChange={(value) => setFormValue("vendor", value)}/>
         <Field label="Beschreibung" value={form.description} required onChange={(value) => setFormValue("description", value)}/>
         <Field label="Datum" type="date" value={form.expenseDate} disabled={form.isRecurring} onChange={(value) => setFormValue("expenseDate", value)}/>
         <Field label="Betrag in CHF" type="number" value={form.amount} required onChange={(value) => setFormValue("amount", value)}/>
         <label className="min-w-0"><FieldLabel>Kunde</FieldLabel><select value={form.customerId} onChange={(event) => setFormValue("customerId", event.target.value)} className="field"><option value="">Kein Kunde</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 self-end text-sm"><input type="checkbox" className="h-5 w-5 flex-none accent-[var(--gold)]" checked={form.isRecurring} onChange={(event) => setFormValue("isRecurring", event.target.checked)}/>Wiederkehrend</label>
         {form.isRecurring && <label className="min-w-0"><FieldLabel>Intervall</FieldLabel><select value={form.recurringInterval} onChange={(event) => setFormValue("recurringInterval", event.target.value as RecurringInterval)} className="field"><option value="monthly">Monatlich</option><option value="yearly">Jährlich</option></select></label>}
         {form.isRecurring && <Field label="Wiederkehrend von" type="date" value={form.recurringStartDate} required onChange={(value) => setFormValue("recurringStartDate", value)}/>}
         {form.isRecurring && <Field label="Wiederkehrend bis" type="date" value={form.recurringEndDate} onChange={(value) => setFormValue("recurringEndDate", value)}/>}
       </div>
-      <div className="mt-6 flex flex-wrap gap-2"><button className="primary">{editingId ? "Änderungen speichern" : "Speichern"}</button><button type="button" onClick={reset} className="action">Abbrechen</button></div>
+      <div className="mt-6 flex flex-wrap gap-3"><button className="primary">{editingId ? "Änderungen speichern" : "Speichern"}</button><button type="button" onClick={reset} className="action">Abbrechen</button></div>
     </form>}
 
-    <section aria-label="Ausgaben filtern" className="mt-7 flex flex-col gap-4 lg:flex-row lg:items-end">
-      <div role="group" aria-label="Zeitraum" className="flex w-full gap-1 rounded-xl border border-[var(--line)] p-1 lg:w-auto">{([["month", "Monat"], ["range", "Zeitraum"], ["customer", "Kunde"]] as const).map(([value, label]) => <button key={value} aria-pressed={filterMode === value} onClick={() => setFilterMode(value)} className={`${filterMode === value ? "filter-active" : "filter"} flex-1 lg:flex-none`}>{label}</button>)}</div>
-      <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2 lg:flex lg:justify-end [&>label]:lg:w-52">
-        {filterMode === "month" && <Field label="Monat" type="month" value={filterMonth} onChange={setFilterMonth}/>}
-        {filterMode === "range" && <><Field label="Von" type="date" value={filterFrom} onChange={setFilterFrom}/><Field label="Bis" type="date" value={filterTo} onChange={setFilterTo}/></>}
-        <label className="min-w-0"><FieldLabel>Kunde</FieldLabel><select value={filterCustomer} onChange={(event) => setFilterCustomer(event.target.value)} className="field"><option value="">Alle Kunden</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label>
-      </div>
+    <section aria-label="Ausgaben filtern" className="mt-7 flex flex-wrap items-center gap-3">
+      <div role="group" aria-label="Zeitraum" className="pill-track max-sm:w-full [&>button]:max-sm:flex-1">{([["month", "Monat"], ["range", "Zeitraum"], ["customer", "Kunde"]] as const).map(([value, label]) => <button key={value} aria-pressed={filterMode === value} onClick={() => setFilterMode(value)} className={filterMode === value ? "filter-active" : "filter"}>{label}</button>)}</div>
+      {filterMode !== "customer" && <div className="pill-track max-sm:w-full">
+        {filterMode === "month" && <FilterDate label="Monat" type="month" value={filterMonth} onChange={setFilterMonth}/>}
+        {filterMode === "range" && <><FilterDate label="Von" type="date" value={filterFrom} onChange={setFilterFrom}/><span aria-hidden className="text-[13px] text-[var(--muted)]">bis</span><FilterDate label="Bis" type="date" value={filterTo} onChange={setFilterTo}/></>}
+      </div>}
+      <label className="min-w-0 max-sm:w-full sm:w-44 xl:ml-auto xl:w-60"><span className="sr-only">Kunde</span><select value={filterCustomer} onChange={(event) => setFilterCustomer(event.target.value)} className="field !min-h-12 rounded-full"><option value="">Alle Kunden</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label>
     </section>
 
-    <section className="panel relative mt-5 overflow-hidden rounded-2xl" aria-busy={loading}>
-      <Guilloche className="absolute -left-72 -top-80 w-[34rem] opacity-20 md:opacity-30"/>
-      <div className="relative grid gap-8 p-6 md:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-12">
+    <section className="raised mt-5 overflow-hidden" aria-busy={loading}>
+      <div className="grid gap-8 p-6 md:p-9 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-12">
         <div className="flex min-w-0 flex-col justify-between gap-8">
           <Stat size="lg" label={filterMode === "customer" ? "Ausgaben bis heute" : "Ausgaben im Zeitraum"} value={loading ? "–" : <CountUp value={total} format={formatCurrency}/>} hint={loading ? undefined : `${filteredExpenses.length} ${filteredExpenses.length === 1 ? "Position" : "Positionen"}`}/>
           <div className="border-t border-[var(--line)] pt-5"><Stat label="Wiederkehrend im Monat" value={loading ? "–" : formatCurrency(recurringMonthlyTotal)}/></div>
@@ -143,7 +140,7 @@ export default function ExpensesPage() {
       </div>
     </section>
 
-    <section aria-label="Ausgabenliste" className="panel mt-5 overflow-hidden rounded-2xl">
+    <section aria-label="Ausgabenliste" className="panel mt-5 overflow-hidden pb-2">
       {loading ? <div className="grid gap-4 p-6">{[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-10"/>)}</div> : filteredExpenses.length ? <>
         <table className="hidden w-full text-left text-sm xl:table"><thead className="text-[13px] text-[var(--muted)]"><tr className="[&>th]:font-medium"><th className="py-4 pl-7 pr-4">Datum</th><th className="px-4">Lieferant</th><th className="px-4">Beschreibung</th><th className="px-4">Kunde</th><th className="px-4 text-right">Betrag</th><th className="pl-4 pr-6 text-right"><span className="sr-only">Aktionen</span></th></tr></thead>
           <tbody>{filteredExpenses.map((expense) => <tr key={expense.id} className="border-t border-[var(--line)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)]">
@@ -151,7 +148,7 @@ export default function ExpensesPage() {
             <td className="px-4 font-semibold">{expense.vendor}</td>
             <td className="max-w-[22rem] px-4 text-[var(--muted)]">{expense.description}{expense.isRecurring && <Interval expense={expense}/>}</td>
             <td className="max-w-[14rem] px-4">{customerNames.get(expense.customerId ?? "") ?? <span className="text-[var(--muted)]">Nicht zugeordnet</span>}</td>
-            <td className="money whitespace-nowrap px-4 text-right text-base font-semibold">{formatCurrency(expense.amount, expense.currency)}</td>
+            <td className="money whitespace-nowrap px-4 text-right font-semibold">{formatCurrency(expense.amount, expense.currency)}</td>
             <td className="pl-4 pr-6"><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></td>
           </tr>)}</tbody></table>
         <ul className="divide-y divide-[var(--line)] xl:hidden">{filteredExpenses.map((expense) => <li key={expense.id} className="px-5 pb-2 pt-4">
@@ -166,29 +163,28 @@ export default function ExpensesPage() {
 
 function dateLabel(expense: Expense) { return new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("de-CH"); }
 
-function Interval({ expense }: { expense: Expense }) { return <span className="ml-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-[var(--ink)]"><Repeat aria-hidden size={13} strokeWidth={1.7}/>{expense.recurringInterval === "yearly" ? "jährlich" : "monatlich"}</span>; }
+function Interval({ expense }: { expense: Expense }) { return <span className="ml-2.5 inline-flex items-baseline gap-1.5 whitespace-nowrap text-[13px] text-[var(--ink)]"><Repeat aria-hidden size={13} strokeWidth={1.6} className="translate-y-0.5"/>{expense.recurringInterval === "yearly" ? "jährlich" : "monatlich"}</span>; }
 
 function Actions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
-  return <div className="flex flex-none justify-end gap-1"><button onClick={onEdit} aria-label="Ausgabe bearbeiten" title="Ausgabe bearbeiten" className="icon-button"><Pencil size={16} strokeWidth={1.7}/></button><button onClick={onRemove} aria-label="Ausgabe löschen" title="Ausgabe löschen" className="icon-button hover:text-[var(--coral)]"><Trash2 size={16} strokeWidth={1.7}/></button></div>;
+  return <div className="flex flex-none justify-end gap-1"><button onClick={onEdit} aria-label="Ausgabe bearbeiten" title="Ausgabe bearbeiten" className="icon-button"><Pencil size={16} strokeWidth={1.6}/></button><button onClick={onRemove} aria-label="Ausgabe löschen" title="Ausgabe löschen" className="icon-button hover:text-[var(--coral)]"><Trash2 size={16} strokeWidth={1.6}/></button></div>;
 }
-
-const single = "color-mix(in oklab, var(--chart-2) 45%, var(--ink))";
 
 function MonthBars({ data, selected, onSelect }: { data: { key: string; recurring: number; single: number }[]; selected?: string; onSelect: (key: string) => void }) {
   const max = Math.max(...data.map((entry) => entry.recurring + entry.single));
   return <div className="flex min-w-0 flex-col justify-end">
-    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 text-[13px] text-[var(--muted)]"><h2 className="text-sm">Monatsverlauf</h2><p className="flex gap-4"><span className="inline-flex items-center gap-2"><i aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: "var(--chart-2)" }}/>Wiederkehrend</span><span className="inline-flex items-center gap-2"><i aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: single }}/>Einmalig</span></p></div>
-    <div className="mt-4 flex gap-1">{data.map((entry, index) => {
+    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 text-[13px] text-[var(--muted)]"><h2 className="text-[13px] font-normal">Monatsverlauf</h2><p className="flex gap-4"><span className="inline-flex items-center gap-2"><i aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--chart-4)]"/>Wiederkehrend</span><span className="inline-flex items-center gap-2"><i aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--chart-3)]"/>Einmalig</span></p></div>
+    <div className="mt-4 flex">{data.map((entry, index) => {
       const value = entry.recurring + entry.single;
       const name = new Date(`${entry.key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "long", year: "numeric" });
       const active = entry.key === selected;
-      return <button key={entry.key} type="button" onClick={() => onSelect(entry.key)} aria-pressed={active} aria-label={`${name}: ${formatCurrency(value)}`} title={`${name}: ${formatCurrency(value)}`} className={`group min-w-0 flex-1 flex-col rounded-lg px-1 pb-1 pt-2 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)] ${index < 6 ? "hidden sm:flex" : "flex"}`}>
-        <span aria-hidden className="flex h-40 w-full flex-col justify-end border-b border-[var(--line)]"><span className={`mx-auto flex w-full max-w-7 origin-bottom flex-col gap-0.5 overflow-hidden rounded-t transition-opacity ${!selected || active ? "" : "opacity-70 group-hover:opacity-90"}`} style={{ height: max > 0 ? `${value / max * 100}%` : 0 }}>{entry.single > 0 && <span style={{ flexGrow: entry.single, background: single }}/>}{entry.recurring > 0 && <span style={{ flexGrow: entry.recurring, background: "var(--chart-2)" }}/>}</span></span>
-        <span aria-hidden className={`mt-2 w-full truncate text-center text-xs ${active ? "font-semibold text-[var(--ink)]" : "text-[var(--muted)]"}`}>{new Date(`${entry.key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short" }).replace(".", "").slice(0, 3)}</span>
+      return <button key={entry.key} type="button" onClick={() => onSelect(entry.key)} aria-pressed={active} aria-label={`${name}: ${formatCurrency(value)}`} title={`${name}: ${formatCurrency(value)}`} className={`group min-w-0 flex-1 flex-col justify-end rounded-2xl pt-2 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_4%,transparent)] ${index < 6 ? "hidden sm:flex" : "flex"}`}>
+        <span aria-hidden className="flex h-40 w-full flex-col items-center justify-end"><span className="flex w-2.5 flex-col gap-0.5 overflow-hidden rounded-full" style={{ height: max > 0 ? `${value / max * 100}%` : 0 }}>{entry.single > 0 && <span className="rounded-full" style={{ flexGrow: entry.single, background: active ? "color-mix(in oklab, var(--chart-1) 45%, var(--ink))" : "var(--chart-3)" }}/>}{entry.recurring > 0 && <span className="rounded-full" style={{ flexGrow: entry.recurring, background: active ? "var(--chart-1)" : "var(--chart-4)" }}/>}</span></span>
+        <span aria-hidden className={`flex h-11 w-full items-center justify-center whitespace-nowrap ${active ? "text-base font-semibold text-[var(--ink)]" : "text-xs text-[var(--muted)]"}`}>{new Date(`${entry.key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "short" }).replace(".", "").slice(0, 3)}</span>
       </button>;
     })}</div>
   </div>;
 }
 
+function FilterDate({ label, value, onChange, type }: { label: string; value: string; onChange: (value: string) => void; type: string }) { return <label className="min-w-0 flex-1"><span className="sr-only">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="money min-h-10 w-full min-w-0 rounded-full bg-transparent px-3 text-center text-sm font-medium text-[var(--ink)] focus-visible:-outline-offset-2 pointer-coarse:min-h-11"/></label>; }
 function FieldLabel({ children }: { children: React.ReactNode }) { return <span className="mb-2 block text-[13px] text-[var(--muted)]">{children}</span>; }
-function Field({ label, value, onChange, type = "text", required = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; disabled?: boolean }) { return <label className="min-w-0"><FieldLabel>{label}</FieldLabel><input required={required} disabled={disabled} type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? 0 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="field min-w-0 disabled:cursor-not-allowed disabled:bg-[var(--surface-soft)] disabled:text-[var(--muted)] disabled:opacity-60"/></label>; }
+function Field({ label, value, onChange, type = "text", required = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; disabled?: boolean }) { return <label className="min-w-0"><FieldLabel>{label}</FieldLabel><input required={required} disabled={disabled} type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? 0 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="field min-w-0 disabled:cursor-not-allowed disabled:opacity-60"/></label>; }
