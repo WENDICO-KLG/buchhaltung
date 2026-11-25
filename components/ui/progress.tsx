@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { toneColor, type Tone } from "@/components/ui/tone";
 
@@ -14,13 +14,13 @@ export function ProgressRing({ value, max, label, size = 168, tone = "gold", chi
   return <div {...aria} aria-label={label} className={cn("relative inline-grid max-w-full flex-none place-items-center", className)} style={{ width: size, aspectRatio: "1" }}>
     <svg aria-hidden viewBox="0 0 100 100" className="absolute inset-0 h-full w-full -rotate-90" fill="none" strokeWidth="3.5">
       <circle cx="50" cy="50" r="47" stroke="var(--ring-track)" />
-      {drawn > 0 && <circle cx="50" cy="50" r="47" pathLength={100} stroke={toneColor[tone]} strokeLinecap={drawn >= 100 ? "butt" : "round"} strokeDashoffset={100 - drawn} className="ring-value" />}
     </svg>
-    <div className="relative px-[14%] text-center">{children ?? <><span className="display block text-[var(--ink)]" style={{ fontSize: Math.max(18, size * .2) }}>{percent}%</span><span className="mt-1 block text-[13px] leading-tight text-[var(--muted)]">{label}</span></>}</div>
+    {drawn > 0 && <svg key={Math.round(drawn)} aria-hidden viewBox="0 0 100 100" className="ring-value absolute inset-0 h-full w-full -rotate-90" fill="none" strokeWidth="3.5"><circle cx="50" cy="50" r="47" pathLength={100} stroke={toneColor[tone]} strokeLinecap={drawn >= 100 ? "butt" : "round"} strokeDasharray={100} strokeDashoffset={100 - drawn} /></svg>}
+    <div className="relative px-[14%] text-center">{children ?? <><span className="display block text-[var(--ink)]" style={{ fontSize: Math.max(18, size * .2) }}>{percent}%</span><span className="mt-1 block text-[13.5px] leading-tight text-[var(--muted)]">{label}</span></>}</div>
   </div>;
 }
 
 export function ProgressBar({ value, max, tone = "gold", label, className }: { value: number; max: number; tone?: Tone; label?: string; className?: string }) {
   const { drawn, aria } = measure(value, max);
-  return <div {...aria} aria-label={label ?? "Fortschritt"} className={cn("h-1 w-full overflow-hidden rounded-full bg-[var(--ring-track)]", className)}><div className="bar-value h-full rounded-full" style={{ width: `${drawn}%`, background: toneColor[tone] }} /></div>;
+  return <div {...aria} aria-label={label ?? "Fortschritt"} className={cn("h-1 w-full overflow-hidden rounded-full bg-[var(--ring-track)]", className)}><div className="bar-value h-full rounded-full" style={{ "--value": `${drawn}%`, background: toneColor[tone] } as CSSProperties} /></div>;
 }

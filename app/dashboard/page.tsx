@@ -197,7 +197,7 @@ export default function Dashboard() {
     <PageHeader className="max-xl:!flex-col max-xl:!items-stretch max-xl:[&>:last-child]:!justify-start" title="Übersicht" subtitle={periodLabel} actions={<PeriodControls mode={rangeMode} onMode={setRangeMode} month={rangeMonth} onMonth={setRangeMonth} year={rangeYear} from={customFrom} onFrom={setCustomFrom} to={customTo} onTo={setCustomTo} onShift={shiftPeriod}
       onToday={(rangeMode === "month" && rangeMonth !== currentMonth) || (rangeMode === "year" && rangeYear !== Number(today.slice(0, 4))) ? () => { setRangeMonth(currentMonth); setRangeYear(Number(today.slice(0, 4))); } : undefined}/>}/>
 
-    <div className="mt-7 grid grid-cols-1 gap-5 md:gap-6">
+    <div className="stagger mt-7 grid grid-cols-1 gap-5 md:gap-6">
       {loadFailed ? <Plate><EmptyState icon={CircleAlert} title="Keine Zahlen verfügbar" text="Die Finanzdaten konnten nicht geladen werden." action={<button onClick={() => window.location.reload()} className="action">Neu laden</button>}/></Plate> : <>
         <div className="grid grid-cols-1 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
           <Hero metrics={metrics} previous={previous} comparisonLabel={comparisonLabel} loading={loading} margin={margin} periodLabel={periodLabel} mode={rangeMode} month={rangeMonth} year={rangeYear} onShift={shiftPeriod}

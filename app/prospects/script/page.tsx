@@ -66,7 +66,7 @@ function CallScript() {
 
     <div className="raised mt-7 p-5 sm:p-7">
     <label className="block">
-      <span className="mb-1.5 block text-[13px] text-[var(--muted)]">Schnellsuche im Gespräch</span>
+      <span className="mb-1.5 block text-[13.5px] text-[var(--muted)]">Schnellsuche im Gespräch</span>
       <span className="relative block">
         <Search size={16} strokeWidth={1.6} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"/>
         <input ref={searchField} type="search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); }} placeholder="Was sagt die Kundin? z. B. teuer, Website, keine Zeit" className="field sales-search"/>
@@ -98,7 +98,7 @@ function CallScript() {
               <div className="min-w-0 pt-1">
                 <h3 className="text-base font-semibold leading-tight">{step.title}</h3>
                 <p className="mt-1 text-sm text-[var(--muted)]">{step.goal}</p>
-                <div className="mt-4 space-y-4">{step.lines.map((line) => <blockquote key={line.text} className="max-w-[68ch] text-base leading-relaxed">{line.label && <span className="mb-0.5 block text-[13px] text-[var(--muted)]">{line.label}</span>}«{line.text}»</blockquote>)}</div>
+                <div className="mt-4 space-y-4">{step.lines.map((line) => <blockquote key={line.text} className="max-w-[68ch] text-base leading-relaxed">{line.label && <span className="mb-0.5 block text-[13.5px] text-[var(--muted)]">{line.label}</span>}«{line.text}»</blockquote>)}</div>
                 <Tip className="mt-4">{step.tip}</Tip>
               </div>
             </li>)}
@@ -168,7 +168,7 @@ function ScriptSection({ id, title, text, children }: { id: string; title: strin
 function ObjectionRow({ item, showCategory = false }: { item: Objection; showCategory?: boolean }) {
   return <article className="grid gap-x-8 gap-y-2 border-t border-[var(--line)] py-5 last:pb-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
     <div className="min-w-0">
-      {showCategory && <p className="mb-1 text-[13px] text-[var(--muted)]">{objectionCategoryLabels[item.category]}</p>}
+      {showCategory && <p className="mb-1 text-[13.5px] text-[var(--muted)]">{objectionCategoryLabels[item.category]}</p>}
       <p className="font-medium leading-snug">«{item.objection}»</p>
     </div>
     <div className="min-w-0 space-y-2"><p className="leading-relaxed">«{item.answer}»</p><Tip>{item.tip}</Tip></div>

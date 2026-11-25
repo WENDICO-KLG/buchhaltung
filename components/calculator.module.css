@@ -38,10 +38,12 @@
     inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, .55),
     inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, .22),
     0 7px 12px -5px rgba(0, 0, 0, .95);
-  transition: transform .16s var(--ease-out), box-shadow .16s var(--ease-out), color .16s var(--ease-out);
+  transition: transform var(--micro) var(--ease-out), color var(--micro) var(--ease-out);
 }
 .soft { color: var(--muted); font-weight: 400; }
-.key:hover { color: var(--ink); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, .8), inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, .35), 0 7px 12px -5px rgba(0, 0, 0, .95); }
+.key::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, .7), inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, .25); transition: opacity var(--micro) var(--ease-out); }
+.equal::after { display: none; }
+@media (hover: hover) { .key:hover { color: var(--ink); } .key:hover::after { opacity: 1; } }
 .key:active { transform: translateY(1px) scale(.95); box-shadow: inset 0 3px 9px rgba(0, 0, 0, .85), inset -1px -1px 1px -.5px rgba(255, 255, 255, .25); }
 .key:focus-visible { outline-offset: 3px; }
 
@@ -61,7 +63,7 @@
 :global(.light) .equal { color: var(--gold); box-shadow: inset 0 0 0 2px var(--green), var(--glow); }
 
 .display { color: var(--ink); font-size: clamp(2.75rem, 5vw, 3.5rem); }
-.expression { width: 100%; min-height: 2.75rem; border: 0; background: transparent; text-align: right; font-size: 1.125rem; color: var(--muted); caret-color: var(--gold); outline: none; border-bottom: 1px solid var(--line); transition: border-color .18s var(--ease-out); }
+.expression { width: 100%; min-height: 2.75rem; border: 0; background: transparent; text-align: right; font-size: 1.125rem; color: var(--muted); caret-color: var(--gold); outline: none; border-bottom: 1px solid var(--line); transition: border-color var(--micro) var(--ease-out); }
 .expression:focus { border-color: var(--gold); color: var(--ink); }
 .expression::placeholder { color: var(--muted); opacity: 1; }
 

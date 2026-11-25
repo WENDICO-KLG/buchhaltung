@@ -52,7 +52,7 @@ export default function AuthCallbackPage() {
   }, [router, searchParams]);
 
   return <main className={`workspace-bg flex min-h-dvh items-center justify-center overflow-clip px-4 ${styles.stage}`}>
-    <div className="raised page-enter w-full max-w-sm px-7 py-9 text-center">
+    <div className="raised card-enter w-full max-w-sm px-7 py-9 text-center">
       <h1 className="sr-only">Anmeldung</h1>
       {error ? <>
         <span aria-hidden className="user-avatar mx-auto !text-[var(--coral)]"><AlertCircle size={19} strokeWidth={1.6}/></span>

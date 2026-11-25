@@ -1,5 +1,5 @@
 .stage:fullscreen { background: var(--ground-dim), var(--ground-image) center / cover no-repeat, var(--paper); }
-.key { display: inline-flex; min-width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; margin-left: .5rem; border-radius: 999px; padding: 0 .4rem; background: var(--glass-round); box-shadow: var(--edge-shadow); color: var(--ink); font-family: inherit; font-size: .75rem; font-weight: 500; }
+.key { display: inline-flex; min-width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; margin-left: .5rem; border-radius: 999px; padding: 0 .4rem; background: var(--glass-round); box-shadow: var(--edge-shadow); color: var(--ink); font-family: inherit; font-size: .8125rem; font-weight: 500; }
 .key:first-child { margin-left: 0; }
-.answer { animation: reveal .28s var(--ease-out) both; }
+.answer { animation: reveal var(--surface-in) var(--ease-out) backwards; }
 @keyframes reveal { from { opacity: 0; transform: translateY(8px); } }

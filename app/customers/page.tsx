@@ -128,7 +128,7 @@ export default function CustomersPage() {
                 <h2 className="text-base font-semibold leading-snug [overflow-wrap:anywhere]">{customer.companyName}</h2>
                 <p className="mt-0.5 text-sm text-[var(--muted)]">{customer.contactName || "Keine Kontaktperson"}</p>
                 {customer.project && <p className="mt-1 text-sm">{customer.project}</p>}
-                {customer.notes && <p className="mt-2 text-[13px] text-[var(--muted)]">{customer.notes}</p>}
+                {customer.notes && <p className="mt-2 text-[13.5px] text-[var(--muted)]">{customer.notes}</p>}
               </div>
             </div>
             <div className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-2">
@@ -181,5 +181,5 @@ function MoneyField({ label, value, onChange }: { label: string; value: number; 
   return <label className="flex min-w-0 flex-col justify-end"><span className={fieldLabel}>{label} (CHF)</span><input type="number" min="0" step="0.01" value={editing ? draft : value} onFocus={() => { setDraft(value === 0 ? "" : String(value)); setEditing(true); }} onBlur={() => setEditing(false)} onChange={(event) => { setDraft(event.target.value); onChange(Number(event.target.value)); }} className="field"/></label>;
 }
 function Revenue({ label, value, detail, active, prominent = false }: { label: string; value: number; detail?: string; active: boolean; prominent?: boolean }) {
-  return <div className="min-w-0"><p className="flex items-center gap-2 text-[13px] text-[var(--muted)]">{prominent && <span aria-hidden className={`dot ${active ? "dot-on" : ""}`}/>}{label}</p><p className={`money mt-0.5 whitespace-nowrap ${prominent ? "text-base font-semibold" : "text-base font-normal"} ${!active ? "text-[var(--muted)]" : ""}`}>{formatCurrency(value)}</p>{detail && <p className="mt-0.5 text-xs leading-snug text-[var(--muted)]">{detail}</p>}</div>;
+  return <div className="min-w-0"><p className="flex items-center gap-2 text-[13.5px] text-[var(--muted)]">{prominent && <span aria-hidden className={`dot ${active ? "dot-on" : ""}`}/>}{label}</p><p className={`money mt-0.5 whitespace-nowrap ${prominent ? "text-base font-semibold" : "text-base font-normal"} ${!active ? "text-[var(--muted)]" : ""}`}>{formatCurrency(value)}</p>{detail && <p className="mt-0.5 text-xs leading-snug text-[var(--muted)]">{detail}</p>}</div>;
 }

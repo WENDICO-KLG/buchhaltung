@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ContactRound } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -24,11 +25,11 @@ export function Pipeline({ prospects, month }: { prospects: Prospect[]; month: s
       <div className="min-w-0"><p className="text-sm text-[var(--muted)]">Offener Wert</p><p className="display mt-2 text-[1.75rem] text-[var(--ink)]">{open.valued ? formatCurrency(open.value) : "–"}</p><Unvalued count={open.unvalued}/></div>
       <ul className="grid min-w-0 gap-4 sm:gap-3.5">{rows.map((row) => <li key={row.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_8.5rem]">
         <span className="text-[var(--ink)]">{row.label} <span className="money text-[var(--muted)]">{row.count}</span></span>
-        <span aria-hidden className="col-span-2 row-start-2 h-1 rounded-full bg-[var(--ring-track)] sm:col-span-1 sm:col-start-2 sm:row-start-1"><span className="bar-value block h-full rounded-full bg-[var(--muted)]" style={{ width: `${Math.max(0, row.value / max * 100)}%` }}/></span>
+        <span aria-hidden className="col-span-2 row-start-2 h-1 overflow-hidden rounded-full bg-[var(--ring-track)] sm:col-span-1 sm:col-start-2 sm:row-start-1"><span className="bar-value block h-full rounded-full bg-[var(--muted)]" style={{ "--value": `${Math.max(0, row.value / max * 100)}%` } as CSSProperties}/></span>
         <span className="money text-right font-medium text-[var(--ink)]">{row.valued ? formatCurrency(row.value) : "–"}</span>
-        {row.unvalued > 0 && <span className="col-span-2 -mt-1.5 text-[13px] text-[var(--muted)] sm:col-start-2">{row.unvalued} ohne Betrag</span>}
+        {row.unvalued > 0 && <span className="col-span-2 -mt-1.5 text-[13.5px] text-[var(--muted)] sm:col-start-2">{row.unvalued} ohne Betrag</span>}
       </li>)}</ul>
-      <div className="min-w-0 border-t border-[var(--line)] pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0"><p className="text-sm text-[var(--muted)]">Gewonnen im {monthLabel(month)}</p><p className="display mt-2 whitespace-nowrap text-[1.75rem] text-[var(--ink)]">{won.count && !won.valued ? "–" : formatCurrency(won.value)}</p><p className="mt-2 flex items-center gap-2 text-sm text-[var(--muted)]"><span aria-hidden className={won.count ? "dot dot-on" : "dot"}/><span>{won.count} {won.count === 1 ? "Deal" : "Deals"}{won.unvalued > 0 && `, ${won.unvalued} ohne Betrag`}</span></p><p className="mt-0.5 text-[13px] text-[var(--muted)]">Nach Datum der letzten Änderung</p></div>
+      <div className="min-w-0 border-t border-[var(--line)] pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0"><p className="text-sm text-[var(--muted)]">Gewonnen im {monthLabel(month)}</p><p className="display mt-2 whitespace-nowrap text-[1.75rem] text-[var(--ink)]">{won.count && !won.valued ? "–" : formatCurrency(won.value)}</p><p className="mt-2 flex items-center gap-2 text-sm text-[var(--muted)]"><span aria-hidden className={won.count ? "dot dot-on" : "dot"}/><span>{won.count} {won.count === 1 ? "Deal" : "Deals"}{won.unvalued > 0 && `, ${won.unvalued} ohne Betrag`}</span></p><p className="mt-0.5 text-[13.5px] text-[var(--muted)]">Nach Datum der letzten Änderung</p></div>
     </div>}
   </Plate>;
 }

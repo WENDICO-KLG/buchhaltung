@@ -32,7 +32,7 @@ export function Hero({ metrics, previous, comparisonLabel, loading, margin, peri
       <Figure label="Ausgaben" hint={metrics.plannedCosts > 0 ? `inkl. ${formatCurrency(metrics.plannedCosts)} geplant` : `davon ${formatCurrency(metrics.recurringCosts)} wiederkehrend`} delta={<Delta neutral value={metrics.costs} previous={previous?.costs} comparisonLabel={comparisonLabel}/>}><SmallAmount value={metrics.costs}/></Figure>
       <Figure label="Provisionen" hint="10 % Grundprovision inkl. Monatsbonus" delta={<Delta neutral value={metrics.commissions} previous={previous?.commissions} comparisonLabel={comparisonLabel}/>}><SmallAmount value={metrics.commissions}/></Figure>
     </dl>}
-    {note && !loading && <p className="text-[13px] text-[var(--muted)]">{note}</p>}
+    {note && !loading && <p className="text-[13.5px] text-[var(--muted)]">{note}</p>}
   </section>;
 }
 

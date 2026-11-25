@@ -1,5 +1,6 @@
 "use client";
 
+import { reducedMotion } from "@/components/ui/motion";
 import { useEffect, useRef, useState } from "react";
 import { closestCorners, DndContext, DragOverlay, KeyboardSensor, PointerSensor, pointerWithin, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent, KeyboardCoordinateGetter } from "@dnd-kit/core";
@@ -162,7 +163,7 @@ export default function TodosPage() {
 
   return <WorkspaceShell active="To-Dos" title="Wendico / To-Dos">
     <div className="todo-page">
-      <PageHeader className="page-enter" title="To-Dos" subtitle={<span className="money flex flex-wrap gap-x-5 gap-y-1">
+      <PageHeader className="card-enter" title="To-Dos" subtitle={<span className="money flex flex-wrap gap-x-5 gap-y-1">
         <span><strong className="font-semibold text-[var(--ink)]">{loading ? "–" : openCount}</strong> offen</span>
         <span className={overdueCount ? "text-[var(--coral)]" : ""}><strong className="font-semibold">{loading ? "–" : overdueCount}</strong> überfällig</span>
         <span><strong className="font-semibold text-[var(--ink)]">{loading ? "–" : todos.filter((todo) => matchesFocus(todo, "today", today)).length}</strong> heute fällig</span>
@@ -205,14 +206,14 @@ export default function TodosPage() {
             })}
           </div>
         </div>
-        <DragOverlay>{dragTodo && <div className={cn("todo-page tile p-5", styles.ghost)}><TaskSummary showPriority todo={dragTodo} relation={relationName(dragTodo)} assignee={assigneeName(dragTodo)}/></div>}</DragOverlay>
+        <DragOverlay dropAnimation={reducedMotion() ? null : { duration: 240, easing: "cubic-bezier(.22, 1, .36, 1)" }}>{dragTodo && <div className={cn("todo-page tile p-5", styles.ghost)}><TaskSummary showPriority todo={dragTodo} relation={relationName(dragTodo)} assignee={assigneeName(dragTodo)}/></div>}</DragOverlay>
       </DndContext>
       {editor !== null && <TaskDialog key={editor === "new" ? "new" : editor.id} todo={editor === "new" ? undefined : editor} customers={customers} prospects={prospects} members={members} onClose={() => setEditor(null)} onSave={save} onDelete={remove}/>}
     </div>
   </WorkspaceShell>;
 }
 
-const fieldLabel = "mb-1.5 block text-[13px] font-medium text-[var(--muted)]";
+const fieldLabel = "mb-1.5 block text-[13.5px] font-medium text-[var(--muted)]";
 
 function BoardColumn({ status, count, disabled, children }: { status: TodoStatus; count: number; disabled: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled });
@@ -227,9 +228,9 @@ function TaskSummary({ todo, relation, assignee, showPriority = false }: { todo:
   const RelationIcon = todo.customerId ? Users : ContactRound;
   return <>
     <span className={cn("block break-words text-base font-semibold leading-snug [overflow-wrap:anywhere]", todo.status === "done" && "font-medium text-[var(--muted)]")}>{todo.title}</span>
-    {showPriority && <span className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-[var(--muted)]"><PriorityFlag priority={todo.priority}/>{priorityLabels[todo.priority ?? "normal"]}</span>}
+    {showPriority && <span className="mt-2 flex items-center gap-1.5 text-[13.5px] font-medium text-[var(--muted)]"><PriorityFlag priority={todo.priority}/>{priorityLabels[todo.priority ?? "normal"]}</span>}
     {todo.notes && <span className="mt-1.5 line-clamp-2 break-words text-sm text-[var(--muted)] [overflow-wrap:anywhere]">{todo.notes}</span>}
-    <span className="mt-3 flex flex-col gap-1.5 text-[13px] text-[var(--muted)]">
+    <span className="mt-3 flex flex-col gap-1.5 text-[13.5px] text-[var(--muted)]">
       {todo.dueDate && <span className={cn("flex items-center gap-2", overdue ? "font-semibold text-[var(--coral)]" : todo.dueDate === todayKey() && "font-semibold text-[var(--ink)]")}><CalendarClock size={15} strokeWidth={1.6} className="shrink-0"/><span className="money">{todo.dueDate === todayKey() ? "Heute" : new Date(`${todo.dueDate}T12:00:00`).toLocaleDateString("de-CH")}{overdue && " · Überfällig"}</span></span>}
       {relation && <span className="flex min-w-0 max-w-full items-center gap-2"><RelationIcon size={15} strokeWidth={1.6} className="shrink-0"/><span className="truncate text-[var(--ink)]" title={relation}>{relation}</span></span>}
       <span className="flex min-w-0 max-w-full items-center gap-2"><UserRound size={15} strokeWidth={1.6} className="shrink-0"/><span className="truncate" title={assignee}>{assignee}</span></span>
@@ -348,7 +349,7 @@ function Comments({ todoId }: { todoId: string }) {
     {error && <div role="alert" className="mt-3 flex items-center justify-between gap-2 text-sm text-[var(--coral)]">{error}<button onClick={() => { setError(""); setLoading(true); setRetry((current) => current + 1); }} className="action">Erneut laden</button></div>}
     <div className="my-4 max-h-64 space-y-2 overflow-y-auto lg:max-h-[19rem] lg:flex-1">
       {loading ? <p className="text-sm text-[var(--muted)]">Kommentare werden geladen...</p> : !comments.length && !error ? <p className="text-sm text-[var(--muted)]">Noch keine Kommentare.</p> : null}
-      {comments.map((comment) => <div key={comment.id} className={styles.comment}><p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{comment.body}</p><p className="money mt-1 text-[13px] text-[var(--muted)]">{new Date(comment.createdAt).toLocaleString("de-CH")}</p></div>)}
+      {comments.map((comment) => <div key={comment.id} className={styles.comment}><p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{comment.body}</p><p className="money mt-1 text-[13.5px] text-[var(--muted)]">{new Date(comment.createdAt).toLocaleString("de-CH")}</p></div>)}
     </div>
     <form onSubmit={submit}><label htmlFor="task-comment" className={fieldLabel}>Kommentar</label><div className="flex items-end gap-2"><textarea id="task-comment" rows={2} value={body} disabled={busy} onChange={(event) => setBody(event.target.value)} className="field min-w-0 flex-1 resize-y"/><button disabled={busy || !body.trim()} className="header-icon-button" title="Kommentar senden" aria-label="Kommentar senden">{busy ? <LoaderCircle size={17} className="animate-spin"/> : <Send size={17}/>}</button></div></form>
   </section>;

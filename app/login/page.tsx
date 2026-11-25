@@ -69,7 +69,7 @@ export default function LoginPage() {
 
   const isSignup = mode === "signup"; const isRecovery = mode === "recovery";
   return <main className={cn("workspace-bg flex min-h-dvh items-center justify-center overflow-clip px-4 py-8 sm:px-8", styles.stage)}>
-    <div className={cn("raised page-enter w-full max-w-[27rem] lg:grid lg:min-h-[38rem] lg:max-w-[62rem] lg:grid-cols-[1.1fr_1fr]", styles.glass)}>
+    <div className={cn("raised card-enter w-full max-w-[27rem] lg:grid lg:min-h-[38rem] lg:max-w-[62rem] lg:grid-cols-[1.1fr_1fr]", styles.glass)}>
       <div className="flex flex-col justify-between gap-8 px-6 pt-8 sm:px-10 sm:pt-10 lg:p-12">
         <Image src="/wendico-logo-v2.png" alt="Wendico" width={260} height={166} priority className="h-auto w-24 object-contain lg:w-44"/>
         <div>
@@ -82,20 +82,20 @@ export default function LoginPage() {
           {error && <Message error>{error}</Message>}{success && <Message>{success}</Message>}
           {!isRecovery && <>
             <button type="button" onClick={signInWithGoogle} disabled={loading} className="action min-h-12 w-full !gap-3"><GoogleMark/><span>Mit Google anmelden</span></button>
-            <div className="my-5 flex items-center gap-4"><span className="h-px flex-1 bg-[var(--line)]"/><span className="auth-muted text-[13px]">oder per E-Mail</span><span className="h-px flex-1 bg-[var(--line)]"/></div>
+            <div className="my-5 flex items-center gap-4"><span className="h-px flex-1 bg-[var(--line)]"/><span className="auth-muted text-[13.5px]">oder per E-Mail</span><span className="h-px flex-1 bg-[var(--line)]"/></div>
             <Field id="email" label="E-Mail" type="email" value={email} onChange={setEmail} icon={Mail} autoComplete="email"/>
           </>}
           <div className={isRecovery ? "" : "mt-4"}><Field id="password" label={isRecovery ? "Neues Passwort" : "Passwort"} type="password" value={password} onChange={setPassword} icon={LockKeyhole} autoComplete={isSignup || isRecovery ? "new-password" : "current-password"}/></div>
-          {!isSignup && !isRecovery && <button type="button" onClick={resetPassword} disabled={loading} className="mt-1 min-h-11 text-[13px] text-[var(--muted)] transition-colors hover:text-[var(--ink)]">Passwort vergessen?</button>}
+          {!isSignup && !isRecovery && <button type="button" onClick={resetPassword} disabled={loading} className="mt-1 min-h-11 text-[13.5px] text-[var(--muted)] transition-colors hover:text-[var(--ink)]">Passwort vergessen?</button>}
           {(isSignup || isRecovery) && <div className="mt-4"><Field id="confirm" label="Passwort bestätigen" type="password" value={confirmPassword} onChange={setConfirmPassword} icon={LockKeyhole} autoComplete="new-password"/></div>}
           <button disabled={loading} className={cn("primary min-h-12 w-full", isSignup || isRecovery ? "mt-7" : "mt-3")}>{loading ? "Bitte warten..." : isRecovery ? "Passwort speichern" : isSignup ? "Konto erstellen" : "Anmelden"}<ArrowRight size={17} strokeWidth={1.8}/></button>
         </form>
-        {!isRecovery && <p className="auth-muted mt-4 text-center text-[13px]">{isSignup ? "Bereits registriert?" : "Noch kein Konto?"} <button type="button" onClick={() => switchMode(isSignup ? "login" : "signup")} className="min-h-11 px-1.5 font-medium text-[var(--ink)] underline decoration-[var(--hairline)] underline-offset-4 transition-colors hover:decoration-[var(--ink)]">{isSignup ? "Anmelden" : "Registrieren"}</button></p>}
+        {!isRecovery && <p className="auth-muted mt-4 text-center text-[13.5px]">{isSignup ? "Bereits registriert?" : "Noch kein Konto?"} <button type="button" onClick={() => switchMode(isSignup ? "login" : "signup")} className="min-h-11 px-1.5 font-medium text-[var(--ink)] underline decoration-[var(--hairline)] underline-offset-4 transition-colors hover:decoration-[var(--ink)]">{isSignup ? "Anmelden" : "Registrieren"}</button></p>}
       </div>
     </div>
   </main>;
 }
 
 function Message({ children, error = false }: { children: React.ReactNode; error?: boolean }) { return <div role={error ? "alert" : "status"} className={cn("mb-5 flex items-center gap-3 text-sm", error ? "text-[var(--coral)]" : "text-[var(--emerald)]")}><span aria-hidden className={cn("dot", error ? "dot-off" : "dot-on")}/><span className="min-w-0">{children}</span></div>; }
-function Field({ id, label, type, value, onChange, icon: Icon, autoComplete }: { id: string; label: string; type: string; value: string; onChange: (value: string) => void; icon: typeof Mail; autoComplete: string }) { return <label className="block"><span className="mb-1.5 block text-[13px] text-[var(--muted)]">{label}</span><span className="relative block"><Icon size={18} strokeWidth={1.6} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)]"/><input id={id} type={type} required minLength={type === "password" ? 8 : undefined} autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} className="field min-h-12 pr-11"/></span></label>; }
+function Field({ id, label, type, value, onChange, icon: Icon, autoComplete }: { id: string; label: string; type: string; value: string; onChange: (value: string) => void; icon: typeof Mail; autoComplete: string }) { return <label className="block"><span className="mb-1.5 block text-[13.5px] text-[var(--muted)]">{label}</span><span className="relative block"><Icon size={18} strokeWidth={1.6} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)]"/><input id={id} type={type} required minLength={type === "password" ? 8 : undefined} autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} className="field min-h-12 pr-11"/></span></label>; }
 function GoogleMark() { return <svg aria-hidden viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>; }

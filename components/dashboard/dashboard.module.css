@@ -1,14 +1,14 @@
 /* Number scale of the hero: dim neighbours around one bright value, on a fine ruler. */
 .scale { position: relative; display: flex; align-items: center; justify-content: space-between; }
 .scale::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--ink) 11%, transparent) 0 1px, transparent 1px 6px); -webkit-mask: radial-gradient(ellipse 50% 70% at 50% 50%, #000, transparent); mask: radial-gradient(ellipse 50% 70% at 50% 50%, #000, transparent); }
-.step { display: inline-flex; flex: 1 1 0; min-width: 2.75rem; min-height: 3.5rem; align-items: center; justify-content: center; border-radius: 999px; color: var(--muted); font-size: .875rem; transition: color .2s var(--ease-out); }
+.step { display: inline-flex; flex: 1 1 0; min-width: 2.75rem; min-height: 3.5rem; align-items: center; justify-content: center; border-radius: 999px; color: var(--muted); font-size: .9375rem; transition: color var(--micro) var(--ease-out); }
 .step.step:hover { color: var(--ink); }
-.far { color: color-mix(in srgb, var(--muted) 86%, var(--paper)); font-size: .8125rem; }
+.far { color: color-mix(in srgb, var(--muted) 90%, var(--paper)); font-size: .875rem; }
 .step.current { color: var(--ink); font-size: 1.75rem; font-weight: 500; letter-spacing: -.02em; }
 .rest { display: none; }
 @media (min-width: 640px) { .rest { display: inline-flex; } }
-.month { min-height: 2.5rem; min-width: 0; border: 0; background: transparent; padding: 0 .25rem; color: var(--ink); text-align: center; font-size: .875rem; font-weight: 500; }
-.month::-webkit-calendar-picker-indicator { margin-inline-start: .25rem; opacity: .55; cursor: pointer; }
+.month { min-height: 2.5rem; min-width: 0; border: 0; background: transparent; padding: 0 .25rem; color: var(--ink); text-align: center; font-size: .9375rem; font-weight: 500; }
+.month::-webkit-calendar-picker-indicator { margin-inline-start: .25rem; opacity: .75; cursor: pointer; }
 .month::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 @media (pointer: coarse) { .month { min-height: 2.75rem; } }
 :global(.light) .far { color: var(--muted); }

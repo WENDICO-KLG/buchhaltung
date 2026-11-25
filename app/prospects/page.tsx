@@ -97,7 +97,7 @@ export default function ProspectsPage() {
         </div>
         {!loaded ? <div className="space-y-6 p-7">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-10"/>)}</div>
           : shown.length ? <div className="pb-2">{shown.map(({ status, items, value }) => <section key={status} aria-label={labels[status]} className="px-5 sm:px-7">
-            <h3 className="flex items-center justify-between gap-4 pb-2.5 pt-6 text-sm"><span className="flex items-center gap-3"><Status tone={tones[status]}>{labels[status]}</Status><span className="money text-[13px] font-normal text-[var(--muted)]">{items.length}</span></span><span className="money text-[13px] font-normal text-[var(--muted)]">{formatCurrency(value)}</span></h3>
+            <h3 className="flex items-center justify-between gap-4 pb-2.5 pt-6 text-sm"><span className="flex items-center gap-3"><Status tone={tones[status]}>{labels[status]}</Status><span className="money text-[13.5px] font-normal text-[var(--muted)]">{items.length}</span></span><span className="money text-[13.5px] font-normal text-[var(--muted)]">{formatCurrency(value)}</span></h3>
             <ul>{items.map((prospect) => <ProspectRow key={prospect.id} prospect={prospect} onEdit={() => edit(prospect)} onRemove={() => remove(prospect.id)}/>)}</ul>
           </section>)}</div>
           : <EmptyState icon={ContactRound} className="pt-6" title={prospects.length ? "Keine Prospects in dieser Ansicht." : "Noch keine Prospects erfasst."} text={prospects.length ? undefined : "Mit dem ersten Eintrag beginnt die Pipeline."} action={prospects.length ? <button onClick={() => setFilter("all")} className="action">Alle anzeigen</button> : undefined}/>}
@@ -132,13 +132,13 @@ function ProspectRow({ prospect, onEdit, onRemove }: { prospect: Prospect; onEdi
     <div className="min-w-0">
       <p className="font-medium leading-snug [overflow-wrap:anywhere]">{prospect.companyName}</p>
       <p className="mt-0.5 text-sm text-[var(--muted)]">{prospect.contactName || prospect.source || "-"}</p>
-      {prospect.notes && <p className="mt-1.5 line-clamp-2 text-[13px] text-[var(--muted)]">{prospect.notes}</p>}
+      {prospect.notes && <p className="mt-1.5 line-clamp-2 text-[13.5px] text-[var(--muted)]">{prospect.notes}</p>}
     </div>
     <div className="text-right xl:order-4"><p className={`money font-medium ${prospect.estimatedValue == null ? "text-[var(--muted)]" : ""}`}>{prospect.estimatedValue != null ? formatCurrency(prospect.estimatedValue) : "-"}</p></div>
     <div className="min-w-0 text-sm max-xl:col-start-1 max-xl:row-start-2 xl:order-2">
       <p className={prospect.nextTask ? "" : "text-[var(--muted)]"}>{prospect.nextTask || "Keine Aufgabe"}</p>
       {prospect.nextTaskAt && <p className={`money mt-0.5 ${overdue ? "font-medium text-[var(--coral)]" : "text-[var(--muted)]"}`}>{overdue ? "Überfällig seit " : ""}{formatDate(prospect.nextTaskAt)}</p>}
-      <p className="money mt-0.5 text-[13px] text-[var(--muted)]">{prospect.lastContactAt ? `Letzter Kontakt ${formatDate(prospect.lastContactAt)}` : formatDate()}</p>
+      <p className="money mt-0.5 text-[13.5px] text-[var(--muted)]">{prospect.lastContactAt ? `Letzter Kontakt ${formatDate(prospect.lastContactAt)}` : formatDate()}</p>
     </div>
     <div className="min-w-0 text-sm text-[var(--muted)] max-xl:col-span-2 max-xl:col-start-1 max-xl:row-start-3 xl:order-3 xl:space-y-1">
       {prospect.email && <a href={`mailto:${prospect.email}`} className={styles.contact}><Mail aria-hidden size={15} strokeWidth={1.6} className="flex-none"/><span>{prospect.email}</span></a>}

@@ -24,21 +24,21 @@ export default function DocumentsPage() {
         <h2 className="text-base font-semibold">Beleg hochladen</h2>
         <Field label="Bezeichnung" value={form.name} onChange={(value) => setForm({ ...form, name: value })}/>
         <Field label="Datum" type="date" value={form.documentDate} onChange={(value) => setForm({ ...form, documentDate: value })}/>
-        <label className="block"><span className="mb-2 block text-[13px] text-[var(--muted)]">Datei</span>
+        <label className="block"><span className="mb-2 block text-[13.5px] text-[var(--muted)]">Datei</span>
           <span className={`group relative flex min-h-48 flex-col items-center justify-center rounded-[1.375rem] border border-dashed border-[var(--hairline)] bg-[var(--field)] px-4 py-6 text-center transition-colors focus-within:border-[var(--gold)] focus-within:ring-3 focus-within:ring-[var(--gold-soft)] hover:border-[color-mix(in_srgb,var(--ink)_32%,transparent)] ${busy ? "opacity-60" : ""}`}>
             <span aria-hidden className="header-icon-button !h-14 !w-14 group-hover:text-[var(--gold)]"><Upload size={20} strokeWidth={1.6}/></span>
             <span aria-hidden className="mt-4 text-sm font-semibold">{busy ? "Beleg wird hochgeladen..." : "Datei auswählen oder ablegen"}</span>
-            <span className="mt-1 text-balance text-[13px] text-[var(--muted)]">PDF, PNG, JPG oder WebP, maximal 10 MB</span>
+            <span className="mt-1 text-balance text-[13.5px] text-[var(--muted)]">PDF, PNG, JPG oder WebP, maximal 10 MB</span>
             <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" disabled={busy} onChange={(event) => upload(event.target.files?.[0])} className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"/>
           </span>
         </label>
       </section>
       <section aria-label="Belege" aria-busy={loading} className="panel overflow-hidden pb-1">
         {years.map((year, index) => { const entries = documents.filter((document) => document.documentDate.startsWith(year)); return <div key={year} className={index ? "border-t border-[var(--line)]" : ""}>
-          <div className="flex items-baseline justify-between px-5 pb-3 pt-5 md:px-7 md:pt-6"><h2 className="money text-base font-semibold">{year}</h2><span className="text-[13px] text-[var(--muted)]">{entries.length} {entries.length === 1 ? "Beleg" : "Belege"}</span></div>
+          <div className="flex items-baseline justify-between px-5 pb-3 pt-5 md:px-7 md:pt-6"><h2 className="money text-base font-semibold">{year}</h2><span className="text-[13.5px] text-[var(--muted)]">{entries.length} {entries.length === 1 ? "Beleg" : "Belege"}</span></div>
           <ul>{entries.map((document) => { const Icon = document.fileType?.startsWith("image/") ? FileImage : FileText; return <li key={document.id} className="flex items-center gap-4 border-t border-[var(--line)] px-5 py-4 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)] md:px-7">
             <span aria-hidden className="icon-button !text-[var(--muted)]"><Icon size={17} strokeWidth={1.6}/></span>
-            <div className="min-w-0 flex-1"><h3 className="break-words font-semibold leading-snug">{document.name}</h3><p className="mt-1 flex flex-wrap gap-x-3 text-[13px] text-[var(--muted)]"><span className="money">{new Date(document.documentDate).toLocaleDateString("de-CH")}</span><span className="max-w-full truncate">{document.fileName}</span></p></div>
+            <div className="min-w-0 flex-1"><h3 className="break-words font-semibold leading-snug">{document.name}</h3><p className="mt-1 flex flex-wrap gap-x-3 text-[13.5px] text-[var(--muted)]"><span className="money">{new Date(document.documentDate).toLocaleDateString("de-CH")}</span><span className="max-w-full truncate">{document.fileName}</span></p></div>
             <button disabled={!document.storagePath} onClick={() => preview(document)} aria-label={`Ansehen: ${document.name}`} title="Ansehen" className="icon-button"><Eye size={17} strokeWidth={1.6}/></button>
           </li>; })}</ul>
         </div>; })}
@@ -47,4 +47,4 @@ export default function DocumentsPage() {
     </div>
   </div></WorkspaceShell>;
 }
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label className="min-w-0"><span className="mb-2 block text-[13px] text-[var(--muted)]">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="field min-w-0"/></label>; }
+function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label className="min-w-0"><span className="mb-2 block text-[13.5px] text-[var(--muted)]">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="field min-w-0"/></label>; }

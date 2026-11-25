@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -17,7 +18,7 @@ export function Ranking({ title, subtitle, rows, kind, empty, href, loading }: {
       : <ol className="mt-5 space-y-4">
         {visible.map((row) => <li key={row.label}>
           <div className="flex items-baseline justify-between gap-4 text-sm"><span title={row.label} className="truncate text-[var(--ink)]">{row.label}</span><span className="money flex-none font-medium text-[var(--ink)]">{formatCurrency(row.value)}</span></div>
-          <div aria-hidden className="mt-2 h-1 rounded-full bg-[var(--ring-track)]"><div className="bar-value h-full rounded-full" style={{ width: `${row.value / max * 100}%`, background: kind === "income" ? "var(--chart-3)" : "var(--chart-2)" }}/></div>
+          <div aria-hidden className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--ring-track)]"><div className="bar-value h-full rounded-full" style={{ "--value": `${row.value / max * 100}%`, background: kind === "income" ? "var(--chart-3)" : "var(--chart-2)" } as CSSProperties}/></div>
         </li>)}
         {rest > 0 && <li className="money flex justify-between gap-4 text-sm text-[var(--muted)]"><span>{rows.length - 6} weitere</span><span>{formatCurrency(rest)}</span></li>}
       </ol>}

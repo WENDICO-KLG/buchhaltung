@@ -3,4 +3,4 @@
 :global(.light) .toc { box-shadow: 0 10px 24px -16px rgba(0, 0, 0, .3); }
 .section { scroll-margin-top: calc(var(--header-h) + 5rem); }
 .number { display: flex; width: 2.75rem; height: 2.75rem; align-items: center; justify-content: center; border-radius: 50%; background: var(--glass-round); box-shadow: var(--edge-shadow); color: var(--muted); font-weight: 500; }
-.key { position: absolute; right: .75rem; top: 50%; min-width: 1.5rem; transform: translateY(-50%); pointer-events: none; border-radius: 999px; padding: .1rem .4rem; box-shadow: var(--edge-shadow); color: var(--muted); font-family: inherit; font-size: .75rem; text-align: center; }
+.key { position: absolute; right: .75rem; top: 50%; min-width: 1.5rem; transform: translateY(-50%); pointer-events: none; border-radius: 999px; padding: .1rem .4rem; box-shadow: var(--edge-shadow); color: var(--muted); font-family: inherit; font-size: .8125rem; text-align: center; }

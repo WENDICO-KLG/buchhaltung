@@ -106,7 +106,7 @@ export default function ExpensesPage() {
     {error && <div role="alert" className="tile mt-6 flex items-center gap-3 px-5 py-3.5 text-sm text-[var(--coral)]"><span aria-hidden className="dot dot-off"/>{error}</div>}
 
     {open && <form ref={formRef} onSubmit={submit} className="panel mt-6 scroll-mt-24 scroll-mb-24 p-6 md:p-7">
-      <div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold">{editingId ? "Ausgabe bearbeiten" : "Neue Ausgabe"}</h2><label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13px] text-[var(--muted)]">Wiederkehrend<input type="checkbox" className="switch" checked={form.isRecurring} onChange={(event) => setFormValue("isRecurring", event.target.checked)}/></label></div>
+      <div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold">{editingId ? "Ausgabe bearbeiten" : "Neue Ausgabe"}</h2><label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13.5px] text-[var(--muted)]">Wiederkehrend<input type="checkbox" className="switch" checked={form.isRecurring} onChange={(event) => setFormValue("isRecurring", event.target.checked)}/></label></div>
       <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
         <Field label="Lieferant" value={form.vendor} required onChange={(value) => setFormValue("vendor", value)}/>
         <Field label="Beschreibung" value={form.description} required onChange={(value) => setFormValue("description", value)}/>
@@ -124,7 +124,7 @@ export default function ExpensesPage() {
       <div role="group" aria-label="Zeitraum" className="pill-track max-sm:w-full [&>button]:max-sm:flex-1">{([["month", "Monat"], ["range", "Zeitraum"], ["customer", "Kunde"]] as const).map(([value, label]) => <button key={value} aria-pressed={filterMode === value} onClick={() => setFilterMode(value)} className={filterMode === value ? "filter-active" : "filter"}>{label}</button>)}</div>
       {filterMode !== "customer" && <div className="pill-track max-sm:w-full">
         {filterMode === "month" && <FilterDate label="Monat" type="month" value={filterMonth} onChange={setFilterMonth}/>}
-        {filterMode === "range" && <><FilterDate label="Von" type="date" value={filterFrom} onChange={setFilterFrom}/><span aria-hidden className="text-[13px] text-[var(--muted)]">bis</span><FilterDate label="Bis" type="date" value={filterTo} onChange={setFilterTo}/></>}
+        {filterMode === "range" && <><FilterDate label="Von" type="date" value={filterFrom} onChange={setFilterFrom}/><span aria-hidden className="text-[13.5px] text-[var(--muted)]">bis</span><FilterDate label="Bis" type="date" value={filterTo} onChange={setFilterTo}/></>}
       </div>}
       <label className="min-w-0 max-sm:w-full sm:w-44 xl:ml-auto xl:w-60"><span className="sr-only">Kunde</span><select value={filterCustomer} onChange={(event) => setFilterCustomer(event.target.value)} className="field !min-h-12 rounded-full"><option value="">Alle Kunden</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}</select></label>
     </section>
@@ -141,7 +141,7 @@ export default function ExpensesPage() {
 
     <section aria-label="Ausgabenliste" className="panel mt-5 overflow-hidden pb-2">
       {loading ? <div className="grid gap-4 p-6">{[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-10"/>)}</div> : filteredExpenses.length ? <>
-        <table className="hidden w-full text-left text-sm xl:table"><thead className="text-[13px] text-[var(--muted)]"><tr className="[&>th]:font-medium"><th className="py-4 pl-7 pr-4">Datum</th><th className="px-4">Lieferant</th><th className="px-4">Beschreibung</th><th className="px-4">Kunde</th><th className="px-4 text-right">Betrag</th><th className="pl-4 pr-6 text-right"><span className="sr-only">Aktionen</span></th></tr></thead>
+        <table className="hidden w-full text-left text-sm xl:table"><thead className="text-[13.5px] text-[var(--muted)]"><tr className="[&>th]:font-medium"><th className="py-4 pl-7 pr-4">Datum</th><th className="px-4">Lieferant</th><th className="px-4">Beschreibung</th><th className="px-4">Kunde</th><th className="px-4 text-right">Betrag</th><th className="pl-4 pr-6 text-right"><span className="sr-only">Aktionen</span></th></tr></thead>
           <tbody>{filteredExpenses.map((expense) => <tr key={expense.id} className="border-t border-[var(--line)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)]">
             <td className="whitespace-nowrap py-4 pl-7 pr-4 text-[var(--muted)]">{dateLabel(expense)}</td>
             <td className="px-4 font-semibold">{expense.vendor}</td>
@@ -153,7 +153,7 @@ export default function ExpensesPage() {
         <ul className="divide-y divide-[var(--line)] xl:hidden">{filteredExpenses.map((expense) => <li key={expense.id} className="px-5 pb-2 pt-4">
           <div className="flex items-baseline justify-between gap-4"><p className="min-w-0 break-words font-semibold">{expense.vendor}</p><p className="money flex-none font-semibold">{formatCurrency(expense.amount, expense.currency)}</p></div>
           <p className="mt-1 text-sm text-[var(--muted)]">{expense.description}</p>
-          <div className="mt-1 flex items-center justify-between gap-3"><p className="min-w-0 text-[13px] text-[var(--muted)]">{dateLabel(expense)}{expense.isRecurring && <Interval expense={expense}/>}<span className="block truncate">{customerNames.get(expense.customerId ?? "") ?? "Nicht zugeordnet"}</span></p><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></div>
+          <div className="mt-1 flex items-center justify-between gap-3"><p className="min-w-0 text-[13.5px] text-[var(--muted)]">{dateLabel(expense)}{expense.isRecurring && <Interval expense={expense}/>}<span className="block truncate">{customerNames.get(expense.customerId ?? "") ?? "Nicht zugeordnet"}</span></p><Actions onEdit={() => edit(expense)} onRemove={() => remove(expense.id)}/></div>
         </li>)}</ul>
       </> : <EmptyState icon={ReceiptText} title="Keine Ausgaben für diesen Filter."/>}
     </section>
@@ -162,7 +162,7 @@ export default function ExpensesPage() {
 
 function dateLabel(expense: Expense) { return new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("de-CH"); }
 
-function Interval({ expense }: { expense: Expense }) { return <span className="ml-2.5 inline-flex items-baseline gap-1.5 whitespace-nowrap text-[13px] text-[var(--ink)]"><Repeat aria-hidden size={13} strokeWidth={1.6} className="translate-y-0.5"/>{expense.recurringInterval === "yearly" ? "jährlich" : "monatlich"}</span>; }
+function Interval({ expense }: { expense: Expense }) { return <span className="ml-2.5 inline-flex items-baseline gap-1.5 whitespace-nowrap text-[13.5px] text-[var(--ink)]"><Repeat aria-hidden size={13} strokeWidth={1.6} className="translate-y-0.5"/>{expense.recurringInterval === "yearly" ? "jährlich" : "monatlich"}</span>; }
 
 function Actions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
   return <div className="flex flex-none justify-end gap-1"><button onClick={onEdit} aria-label="Ausgabe bearbeiten" title="Ausgabe bearbeiten" className="icon-button"><Pencil size={16} strokeWidth={1.6}/></button><button onClick={onRemove} aria-label="Ausgabe löschen" title="Ausgabe löschen" className="icon-button hover:text-[var(--coral)]"><Trash2 size={16} strokeWidth={1.6}/></button></div>;
@@ -171,7 +171,7 @@ function Actions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => voi
 function MonthBars({ data, selected, onSelect }: { data: { key: string; recurring: number; single: number }[]; selected?: string; onSelect: (key: string) => void }) {
   const max = Math.max(...data.map((entry) => entry.recurring + entry.single));
   return <div className="flex min-w-0 flex-col justify-end">
-    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 text-[13px] text-[var(--muted)]"><h2 className="text-[13px] font-normal">Monatsverlauf</h2><p className="flex gap-4"><span className="inline-flex items-center gap-2"><i aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--chart-4)]"/>Wiederkehrend</span><span className="inline-flex items-center gap-2"><i aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--chart-3)]"/>Einmalig</span></p></div>
+    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 text-[13.5px] text-[var(--muted)]"><h2 className="text-[13.5px] font-normal">Monatsverlauf</h2><p className="flex gap-4"><span className="inline-flex items-center gap-2"><i aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--chart-4)]"/>Wiederkehrend</span><span className="inline-flex items-center gap-2"><i aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--chart-3)]"/>Einmalig</span></p></div>
     <div className="mt-4 flex">{data.map((entry, index) => {
       const value = entry.recurring + entry.single;
       const name = new Date(`${entry.key}-01T12:00:00`).toLocaleDateString("de-CH", { month: "long", year: "numeric" });
@@ -185,5 +185,5 @@ function MonthBars({ data, selected, onSelect }: { data: { key: string; recurrin
 }
 
 function FilterDate({ label, value, onChange, type }: { label: string; value: string; onChange: (value: string) => void; type: string }) { return <label className="min-w-0 flex-1"><span className="sr-only">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="money min-h-10 w-full min-w-0 rounded-full bg-transparent px-3 text-center text-sm font-medium text-[var(--ink)] focus-visible:-outline-offset-2 pointer-coarse:min-h-11"/></label>; }
-function FieldLabel({ children }: { children: React.ReactNode }) { return <span className="mb-2 block text-[13px] text-[var(--muted)]">{children}</span>; }
+function FieldLabel({ children }: { children: React.ReactNode }) { return <span className="mb-2 block text-[13.5px] text-[var(--muted)]">{children}</span>; }
 function Field({ label, value, onChange, type = "text", required = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; disabled?: boolean }) { return <label className="min-w-0"><FieldLabel>{label}</FieldLabel><input required={required} disabled={disabled} type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? 0 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="field min-w-0 disabled:cursor-not-allowed disabled:opacity-60"/></label>; }

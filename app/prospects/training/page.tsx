@@ -85,8 +85,8 @@ function ObjectionTrainer() {
   return <>
     <PageHeader title="Einwand-Training" subtitle="Einwand lesen, laut antworten, dann mit der Musterantwort vergleichen." actions={<div className="w-full sm:w-80">
         <div className="flex items-baseline justify-between gap-3 text-sm"><span className="text-[var(--muted)]">Fortschritt</span><span className="tabular-nums"><strong>{mastered}</strong> von {objections.length} sitzen</span></div>
-        <div role="progressbar" aria-label="Einwände, die sitzen" aria-valuemin={0} aria-valuemax={objections.length} aria-valuenow={mastered} className="mt-2.5 h-1 overflow-hidden rounded-full bg-[var(--ring-track)]"><div className="bar-value h-full rounded-full bg-[var(--green)]" style={{ width: `${(mastered / objections.length) * 100}%` }}/></div>
-        <div className="mt-2 flex min-h-11 items-center justify-between gap-3 text-[13px] text-[var(--muted)]"><span>Wird auf diesem Gerät gespeichert.</span>{Object.keys(progress).length > 0 && <button className="min-h-11 font-medium text-[var(--ink)] hover:underline" onClick={resetProgress}>Zurücksetzen</button>}</div>
+        <div role="progressbar" aria-label="Einwände, die sitzen" aria-valuemin={0} aria-valuemax={objections.length} aria-valuenow={mastered} className="mt-2.5 h-1 overflow-hidden rounded-full bg-[var(--ring-track)]"><div className="bar-value h-full rounded-full bg-[var(--green)]" style={{ "--value": `${(mastered / objections.length) * 100}%` } as React.CSSProperties}/></div>
+        <div className="mt-2 flex min-h-11 items-center justify-between gap-3 text-[13.5px] text-[var(--muted)]"><span>Wird auf diesem Gerät gespeichert.</span>{Object.keys(progress).length > 0 && <button className="min-h-11 font-medium text-[var(--ink)] hover:underline" onClick={resetProgress}>Zurücksetzen</button>}</div>
       </div>}/>
 
     <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -123,7 +123,7 @@ function ObjectionTrainer() {
           <button className={revealed ? "action" : "primary gap-2"} onClick={() => setRevealed(!revealed)}>{revealed ? <EyeOff size={16}/> : <Eye size={16}/>}{revealed ? "Antwort verbergen" : "Antwort zeigen"}</button>
           <button className="action" onClick={next}>Nächster Einwand<ArrowRight size={16}/></button>
           {presentButton}
-          <p className="ml-auto hidden items-center gap-1.5 text-[13px] text-[var(--muted)] lg:flex"><Key>A</Key>Antwort<Key>→</Key>weiter<Key>1</Key>üben<Key>2</Key>sitzt</p>
+          <p className="ml-auto hidden items-center gap-1.5 text-[13.5px] text-[var(--muted)] lg:flex"><Key>A</Key>Antwort<Key>→</Key>weiter<Key>1</Key>üben<Key>2</Key>sitzt</p>
         </div>
       </> : <div className="raised px-6 py-14 text-center sm:px-10">
         <span className="user-avatar mx-auto"><Trophy aria-hidden size={20} strokeWidth={1.6} className="text-[var(--primary)]"/></span>

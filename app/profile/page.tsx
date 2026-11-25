@@ -41,15 +41,15 @@ export default function CompanyPage() {
           <p className="mt-8 text-sm leading-6">{profile.address}<br/>{profile.postalCode} {profile.city}<br/>{profile.country}</p>
           {contact.length > 0 && <div className="mt-5 text-sm leading-6 text-[var(--muted)]">{contact.map((line) => <p key={line}>{line}</p>)}</div>}
           {(profile.iban || profile.vatNumber) && <dl className="money mt-7 space-y-3 border-t border-[var(--line)] pt-6 text-sm">
-            {profile.iban && <div><dt className="text-[13px] text-[var(--muted)]">IBAN</dt><dd className="mt-0.5 font-medium">{profile.iban}</dd></div>}
-            {profile.vatNumber && <div><dt className="text-[13px] text-[var(--muted)]">UID</dt><dd className="mt-0.5 font-medium">{profile.vatNumber}</dd></div>}
+            {profile.iban && <div><dt className="text-[13.5px] text-[var(--muted)]">IBAN</dt><dd className="mt-0.5 font-medium">{profile.iban}</dd></div>}
+            {profile.vatNumber && <div><dt className="text-[13.5px] text-[var(--muted)]">UID</dt><dd className="mt-0.5 font-medium">{profile.vatNumber}</dd></div>}
           </dl>}
         </section>
         <form onSubmit={submit} className="plate px-5 pb-6 sm:px-8 sm:pb-8">
           <div className="divide-y divide-[var(--line)]">{groups.map((group) => <fieldset key={group.title} className="grid min-w-0 gap-x-4 gap-y-4 py-7 sm:grid-cols-2 sm:py-8 xl:grid-cols-[7.5rem_minmax(0,1fr)_minmax(0,1fr)]">
             <legend className="sr-only">{group.title}</legend>
             <p aria-hidden className="text-base font-semibold sm:col-span-2 xl:col-span-1 xl:row-start-1">{group.title}</p>
-            {group.keys.flatMap((groupKey) => fields.filter(({ key }) => key === groupKey)).map(({ key, label, type }) => <label key={key} className={`min-w-0 ${wide.includes(key) ? "sm:col-span-2 xl:col-start-2" : group.keys.filter((item) => !wide.includes(item)).indexOf(key) % 2 ? "xl:col-start-3" : "xl:col-start-2"}`}><span className="mb-1.5 block text-[13px] text-[var(--muted)]">{label}</span><input required={["companyName", "ownerName", "email", "country"].includes(key)} type={type ?? "text"} value={String(profile[key] ?? "")} onChange={(event) => update(key, event.target.value)} className="field"/></label>)}
+            {group.keys.flatMap((groupKey) => fields.filter(({ key }) => key === groupKey)).map(({ key, label, type }) => <label key={key} className={`min-w-0 ${wide.includes(key) ? "sm:col-span-2 xl:col-start-2" : group.keys.filter((item) => !wide.includes(item)).indexOf(key) % 2 ? "xl:col-start-3" : "xl:col-start-2"}`}><span className="mb-1.5 block text-[13.5px] text-[var(--muted)]">{label}</span><input required={["companyName", "ownerName", "email", "country"].includes(key)} type={type ?? "text"} value={String(profile[key] ?? "")} onChange={(event) => update(key, event.target.value)} className="field"/></label>)}
           </fieldset>)}</div>
           <button className="primary mt-1 w-full sm:w-auto sm:min-w-40 xl:ml-[8.5rem]">{saved && <Check size={17}/>} {saved ? "Gespeichert" : "Speichern"}</button>
           <span role="status" className="sr-only">{saved ? "Gespeichert" : ""}</span>

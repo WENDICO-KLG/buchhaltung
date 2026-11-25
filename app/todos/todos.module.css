@@ -17,11 +17,12 @@
   .strip::-webkit-scrollbar { display: none; }
 }
 
-.column { transition: box-shadow .2s var(--ease-out); }
-.over { box-shadow: var(--shadow-plate), inset 0 0 0 1px color-mix(in srgb, var(--green) 34%, transparent), inset 0 0 44px -14px color-mix(in srgb, var(--green) 32%, transparent); }
-.card { transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out), opacity .16s var(--ease-out); box-shadow: inset 0 18px 34px -26px color-mix(in srgb, #fff 20%, transparent), 0 14px 26px -18px rgba(0, 0, 0, .75); }
+.column::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity var(--micro) var(--ease-out); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 34%, transparent), inset 0 0 44px -14px color-mix(in srgb, var(--green) 32%, transparent); }
+.over::after { opacity: 1; }
+.card { transition: transform 220ms var(--ease-out), opacity var(--micro) var(--ease-out); box-shadow: inset 0 18px 34px -26px color-mix(in srgb, #fff 20%, transparent), 0 14px 26px -18px rgba(0, 0, 0, .75); }
 :global(.light) .card { box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 12px 24px -18px rgba(0, 0, 0, .25); }
-.card::before { opacity: .72; }
+.card::before { opacity: .72; transition: opacity var(--micro) var(--ease-out); }
+.card .plain::before { transition: opacity var(--micro) var(--ease-out); }
 .card:hover::before { opacity: 1; }
 .card:hover { transform: translateY(-2px); }
 .lifted { opacity: .3; }
@@ -33,13 +34,13 @@
 .card .plain:hover::before, .card .plain:focus-visible::before { opacity: 1; }
 
 /* Quiet selects inside a card: text until you reach for them. */
-.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: 999px; background-color: transparent; padding: 0 1.3rem 0 .5rem !important; color: var(--muted); font-size: .8125rem; font-weight: 400; background-position: calc(100% - 10px) 50%, calc(100% - 6px) 50% !important; background-size: 4px 4px !important; transition: color .16s var(--ease-out), background-color .16s var(--ease-out); text-overflow: ellipsis; }
+.card select.quiet { field-sizing: content; min-width: 0; min-height: 2.25rem; border-radius: 999px; background-color: transparent; padding: 0 1.3rem 0 .5rem !important; color: var(--muted); font-size: .84375rem; font-weight: 400; background-position: calc(100% - 10px) 50%, calc(100% - 6px) 50% !important; background-size: 4px 4px !important; transition: color var(--micro) var(--ease-out), background-color var(--micro) var(--ease-out); text-overflow: ellipsis; }
 .card select.quiet:hover { background-color: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
 .card select.strong { color: var(--ink); font-weight: 500; }
 @media (pointer: coarse) { .card select.quiet { min-height: 2.75rem; } }
 
-.dialog { animation: dialog-in .28s var(--ease-out) both; }
-.dialog::backdrop { animation: backdrop-in .2s var(--ease-out) both; }
+.dialog { animation: dialog-in var(--surface-in) var(--ease-out) backwards; }
+.dialog::backdrop { animation: backdrop-in var(--surface-in) var(--ease-out) backwards; }
 .dialog input[type="date"] { min-width: 0; -webkit-appearance: none; appearance: none; }
 .head { background: linear-gradient(var(--chrome-solid) 78%, transparent); }
 .comment { border-radius: 1.125rem; padding: .75rem 1rem; background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
@@ -47,5 +48,5 @@
   .dialog { margin: auto auto calc(.75rem + env(safe-area-inset-bottom)); width: calc(100% - 1.5rem); max-height: calc(100dvh - 4.5rem - env(safe-area-inset-top)); border-radius: 1.9rem; animation-name: sheet-in; }
 }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
-@keyframes sheet-in { from { transform: translateY(40%); opacity: 0; } }
+@keyframes sheet-in { from { transform: translateY(2.5rem); opacity: 0; } }
 @keyframes backdrop-in { from { opacity: 0; } }

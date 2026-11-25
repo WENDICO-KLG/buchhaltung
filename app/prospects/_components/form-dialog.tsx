@@ -44,7 +44,7 @@ export function FieldGroup({ title, children }: { title: string; children: React
   </fieldset>;
 }
 
-export const fieldLabel = "mb-1.5 block text-[13px] text-[var(--muted)]";
+export const fieldLabel = "mb-1.5 block text-[13.5px] font-medium text-[var(--muted)]";
 
 export function Field({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
   return <label className="flex min-w-0 flex-col justify-end"><span className={fieldLabel}>{label}</span><input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="field"/></label>;
