@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Bell, CalendarClock, CheckCircle2, FileWarning, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getInvoices, getProspects, getTodos, savePushSubscription } from "@/lib/storage";
+import { getDueProspects, getInvoices, getTodos, savePushSubscription } from "@/lib/storage";
 import type { Invoice, Prospect, Todo } from "@/types";
 import { canAccessPage, getActiveCompany } from "@/lib/company";
 
@@ -22,7 +22,7 @@ const dateOnly = () => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-function collectNotifications(invoices: Invoice[], prospects: Prospect[], todos: Todo[]): DueNotification[] {
+function collectNotifications(invoices: Invoice[], prospects: Pick<Prospect, "id" | "companyName" | "status" | "nextTask" | "nextTaskAt">[], todos: Todo[]): DueNotification[] {
   const today = dateOnly();
   const invoiceNotifications = invoices
     .filter((invoice) => ["sent", "overdue"].includes(invoice.status) && invoice.dueDate <= today)
@@ -54,7 +54,7 @@ export function NotificationCenter() {
       if (!company) return;
       const [invoices, prospects, todos] = await Promise.all([
         canAccessPage(company,"dashboard") ? getInvoices() : Promise.resolve([]),
-        canAccessPage(company,"prospects") ? getProspects() : Promise.resolve([]),
+        canAccessPage(company,"prospects") ? getDueProspects(dateOnly()) : Promise.resolve([]),
         canAccessPage(company,"todos") ? getTodos() : Promise.resolve([]),
       ]);
       if (active) setItems(collectNotifications(invoices,prospects,todos));

@@ -8,7 +8,7 @@ import { CalendarClock, Check, ContactRound, GripVertical, LoaderCircle, Message
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createTodo, createTodoComment, deleteTodo, getCustomers, getProspects, getTodoComments, getTodos, updateTodo } from "@/lib/storage";
+import { createTodo, createTodoComment, deleteTodo, getCustomers, getLinkableProspects, getTodoComments, getTodos, updateTodo } from "@/lib/storage";
 import { todayKey } from "@/lib/utils";
 import { companyMemberName, currentCompanyId, getCompanyMembers } from "@/lib/company";
 import type { CompanyMember } from "@/lib/company";
@@ -25,6 +25,7 @@ const statusOrder: TodoStatus[] = ["not_started", "in_progress", "done"];
 const focusLabels = { all: "Alle Aufgaben", overdue: "Überfällig", today: "Heute fällig", undated: "Ohne Termin" };
 type Focus = keyof typeof focusLabels;
 type LinkChoice = "" | `customer:${string}` | `prospect:${string}`;
+type LinkProspect = Pick<Prospect, "id" | "companyName">;
 type TodoInput = Omit<Todo, "id" | "createdAt" | "updatedAt">;
 
 const boardCoordinates: KeyboardCoordinateGetter = (event, { currentCoordinates, context }) => {
@@ -53,7 +54,7 @@ function compareTodos(left: Todo, right: Todo) {
 export default function TodosPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [prospects, setProspects] = useState<LinkProspect[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState<TodoPriority | "all">("all");
@@ -76,7 +77,10 @@ export default function TodosPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getTodos(), getCustomers(), getProspects(), currentCompanyId().then(getCompanyMembers)]).then(([todoData, customerData, prospectData, memberData]) => {
+    const todoRows = getTodos();
+    // Thousands of untouched imports would make the pickers useless; a prospect appears once it is worked on.
+    const linkable = todoRows.then((rows) => getLinkableProspects(rows.flatMap((todo) => todo.prospectId ?? [])));
+    Promise.all([todoRows, getCustomers(), linkable, currentCompanyId().then(getCompanyMembers)]).then(([todoData, customerData, prospectData, memberData]) => {
       if (active) { setTodos(todoData); setCustomers(customerData); setProspects(prospectData); setMembers(memberData); }
     }).catch((cause) => { if (active) { setLoadFailed(true); setError(cause instanceof Error ? cause.message : "Aufgaben konnten nicht geladen werden."); } }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -261,11 +265,11 @@ function TaskCard({ todo, relation, assignee, busy, onOpen, onStatusChange, onPr
   </article>;
 }
 
-function LinkOptions({ customers, prospects }: { customers: Customer[]; prospects: Prospect[] }) {
+function LinkOptions({ customers, prospects }: { customers: Customer[]; prospects: LinkProspect[] }) {
   return <><option value="">Intern / ohne Bezug</option><optgroup label="Kunden">{customers.map((customer) => <option key={customer.id} value={`customer:${customer.id}`}>{customer.companyName}</option>)}</optgroup><optgroup label="Prospects">{prospects.map((prospect) => <option key={prospect.id} value={`prospect:${prospect.id}`}>{prospect.companyName}</option>)}</optgroup></>;
 }
 
-function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDelete }: { todo?: Todo; customers: Customer[]; prospects: Prospect[]; members: CompanyMember[]; onClose: () => void; onSave: (input: TodoInput) => Promise<void>; onDelete: (todo: Todo) => Promise<void> }) {
+function TaskDialog({ todo, customers, prospects, members, onClose, onSave, onDelete }: { todo?: Todo; customers: Customer[]; prospects: LinkProspect[]; members: CompanyMember[]; onClose: () => void; onSave: (input: TodoInput) => Promise<void>; onDelete: (todo: Todo) => Promise<void> }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState(todo?.title ?? "");
   const [notes, setNotes] = useState(todo?.notes ?? "");

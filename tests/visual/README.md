@@ -8,7 +8,7 @@ Runs the app against a local, in-memory imitation of Supabase and photographs ev
 node tests/visual/mock-supabase.mjs [port] [--mode owner] [--log]   # default 54399, 127.0.0.1 only
 ```
 
-Covers the auth, REST, RPC and storage calls made by `lib/` and the pages, including page permissions and the cascades. Fixtures (`fixtures.mjs`) are fictional and dated relative to today. Writes live in memory; `curl -X POST http://127.0.0.1:54399/__mock/reset` restores the fixtures (also needed after midnight). Simplifications: filters are limited to `eq neq lt lte gt gte is in`, database constraints are not checked, signed URLs do not expire, signing up sends nothing.
+Covers the auth, REST, RPC and storage calls made by `lib/` and the pages, including page permissions and the cascades. Fixtures (`fixtures.mjs`, with 1,250 generated Instantly prospects) are fictional and dated relative to today. Writes live in memory; `curl -X POST http://127.0.0.1:54399/__mock/reset` restores the fixtures (also needed after midnight). Simplifications: filters are limited to `eq neq lt lte gt gte is in like`, `not.` and a flat `or`; a select returns at most 1000 rows (`offset`/`limit` or `Range`), database constraints are not checked, signed URLs do not expire, signing up sends nothing.
 
 The account decides the mode, so all modes work at once. Sign in by e-mail with any password of 8 or more characters (`falsch123` shows the error):
 

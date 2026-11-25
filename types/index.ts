@@ -131,6 +131,9 @@ export interface CompanyProfile {
     nextTaskAt?: string;
     estimatedValue?: number;
     notes?: string;
+    /** Latest reply of the lead; written by the Instantly sync only. */
+    message?: string;
+    messageAt?: string;
     createdAt: string;
     updatedAt: string;
   }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CircleAlert } from "lucide-react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
-import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, getProspects, getSocialMediaOrders, saveMonthlyGoal } from "@/lib/storage";
+import { getCustomers, getExpenses, getInvoices, getMonthlyGoal, getProspectFigures, getSocialMediaOrders, saveMonthlyGoal } from "@/lib/storage";
 import { GoalPanel, type GoalForm } from "@/components/dashboard/goal-panel";
 import { Hero } from "@/components/dashboard/hero";
 import { MonthChart } from "@/components/dashboard/month-chart";
@@ -57,7 +57,7 @@ export default function Dashboard() {
   const [commissions, setCommissions] = useState<DashboardCommission[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [prospects, setProspects] = useState<Prospect[]>();
+  const [prospects, setProspects] = useState<Pick<Prospect, "status" | "estimatedValue" | "updatedAt">[]>();
   const [error, setError] = useState("");
 
   const [rangeMode, setRangeMode] = useState<RangeMode>("month");
@@ -85,7 +85,7 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     getActiveCompany()
-      .then((company) => company && canAccessPage(company, "prospects") ? getProspects() : undefined)
+      .then((company) => company && canAccessPage(company, "prospects") ? getProspectFigures() : undefined)
       .then((data) => { if (!cancelled) setProspects(data); })
       .catch(() => undefined);
     return () => { cancelled = true; };

@@ -8,12 +8,14 @@ import { monthLabel, Plate, PlateHeading } from "./shared";
 
 const stages: { status: ProspectStatus; label: string }[] = [{ status: "new", label: "Neu" }, { status: "contacted", label: "Kontaktiert" }, { status: "meeting", label: "Gespräch" }, { status: "offer", label: "Offerte" }];
 
-function summarize(rows: Prospect[]) {
+type PipelineProspect = Pick<Prospect, "status" | "estimatedValue" | "updatedAt">;
+
+function summarize(rows: PipelineProspect[]) {
   const valued = rows.filter(({ estimatedValue }) => estimatedValue != null);
   return { count: rows.length, value: valued.reduce((sum, { estimatedValue }) => sum + (estimatedValue ?? 0), 0), valued: valued.length, unvalued: rows.length - valued.length };
 }
 
-export function Pipeline({ prospects, month }: { prospects: Prospect[]; month: string }) {
+export function Pipeline({ prospects, month }: { prospects: PipelineProspect[]; month: string }) {
   const rows = stages.map(({ status, label }) => ({ label, ...summarize(prospects.filter((prospect) => prospect.status === status)) }));
   const open = summarize(prospects.filter(({ status }) => stages.some((stage) => stage.status === status)));
   // Prospects store no win date; the last change is the closest recorded one and is named as such below.

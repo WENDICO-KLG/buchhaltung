@@ -140,19 +140,28 @@ export function createMockServer({ mode: defaultMode = "owner", log = false } = 
 
   // ---- PostgREST subset -------------------------------------------------
   const RESERVED = new Set(["select", "order", "limit", "offset", "on_conflict", "columns"]);
+  const MAX_ROWS = 1000; // like Supabase
   const OPS = {
     eq: (a, b) => String(a) === b, neq: (a, b) => String(a) !== b,
     lt: (a, b) => a != null && String(a) < b, lte: (a, b) => a != null && String(a) <= b, gt: (a, b) => a != null && String(a) > b, gte: (a, b) => a != null && String(a) >= b,
+    like: (a, b) => a != null && new RegExp(`^${b.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/[*%]/g, ".*")}$`, "s").test(String(a)),
     is: (a, b) => (b === "null" ? a == null : String(a) === b),
     in: (a, b) => b.replace(/^\(|\)$/g, "").split(",").map((v) => v.replace(/^"|"$/g, "")).includes(String(a)),
   };
+  function condition(column, expression) {
+    const negated = expression.startsWith("not.");
+    const [, name, value] = /^(\w+)\.(.*)$/s.exec(negated ? expression.slice(4) : expression) ?? [];
+    const op = OPS[name] ?? fail(400, "PGRST100", `Mock: unsupported filter ${column}=${expression}`);
+    return (row) => (negated ? (name === "is" || row[column] != null) && !op(row[column], value) : op(row[column], value));
+  }
   function matcher(params) {
     const tests = [];
     for (const [column, expression] of params) {
       if (RESERVED.has(column)) continue;
-      const dot = expression.indexOf(".");
-      const op = OPS[expression.slice(0, dot)] ?? fail(400, "PGRST100", `Mock: unsupported filter ${column}=${expression}`);
-      tests.push((row) => op(row[column], expression.slice(dot + 1)));
+      if (column !== "or") { tests.push(condition(column, expression)); continue; }
+      // Commas inside brackets belong to in.(…).
+      const any = expression.slice(1, -1).split(/,(?![^(]*\))/).map((part) => condition(part.slice(0, part.indexOf(".")), part.slice(part.indexOf(".") + 1)));
+      tests.push((row) => any.some((test) => test(row)));
     }
     return (row) => tests.every((test) => test(row));
   }
@@ -187,9 +196,12 @@ export function createMockServer({ mode: defaultMode = "owner", log = false } = 
     if (req.method === "GET" || req.method === "HEAD") {
       let result = visible();
       if (params.get("order")) result = [...result].sort(sorter(params.get("order")));
-      const offset = Number(params.get("offset") ?? 0);
+      const range = /^(\d+)-(\d*)$/.exec(req.headers.range ?? "");
+      const offset = Number(params.get("offset") ?? range?.[1] ?? 0);
+      const limit = Number(params.get("limit") ?? (range?.[2] ? Number(range[2]) - offset + 1 : MAX_ROWS));
       const total = result.length;
-      result = result.slice(offset, params.has("limit") ? offset + Number(params.get("limit")) : undefined);
+      if (prefer.includes("count=") && offset > total) fail(416, "PGRST103", "Requested range not satisfiable");
+      result = result.slice(offset, offset + Math.min(limit, MAX_ROWS));
       return { ...respond(result, 200), headers: { "Content-Range": `${result.length ? `${offset}-${offset + result.length - 1}` : "*"}/${prefer.includes("count=") ? total : "*"}` } };
     }
     if (req.method === "POST") {

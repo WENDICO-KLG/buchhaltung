@@ -116,6 +116,25 @@ export function createFixtures(now = new Date()) {
     prospect(10, "Kiosk Nirgendwo", "Kurt Kiosk", "lost", "Kaltakquise", 1500, -25, null, null, "Kein Budget in diesem Jahr."),
   ];
 
+  // Imported leads: many share an updated_at, so only the id makes their order stable.
+  const replies = [
+    "Guten Tag\n\nDanke für Ihre Nachricht. Wir haben aktuell keinen Bedarf.\n\nFreundliche Grüsse\nPetra Platzhalter",
+    "Klingt interessant, rufen Sie mich bitte am Dienstag an.",
+    "Text mit <b>Auszeichnung</b> & <img src=x onerror=alert(1)> muss als Text erscheinen.\n\n  - eingerückte Zeile\n  - zweite Zeile",
+    `Ausführliche Antwort. ${"Wir prüfen das Angebot intern und melden uns mit Rückfragen zum Umfang. ".repeat(24)}\nEnde der Antwort.`,
+    `https://beispiel.example/${"sehr-langer-pfad-".repeat(14)}`,
+  ];
+  const trades = ["Garage", "Praxis", "Atelier", "Gasthof", "Malerei", "Kanzlei", "Gärtnerei", "Studio"];
+  for (let n = 1; n <= 1250; n += 1) {
+    const replied = n % 23 === 0, contacted = n % 4 !== 0, last = n === 1250, number = String(n).padStart(4, "0");
+    prospects.push(own({
+      id: `instantly-00000000-0000-4000-8000-00000000${number}`, company_name: last ? "Letzte Zeile Demo AG" : `${trades[n % trades.length]} Fantasie ${number}`, contact_name: n % 5 ? `Demo Person ${number}` : null,
+      email: `lead${number}@import.example`, phone: n % 3 ? `+41 79 000 ${number.slice(0, 2)} ${number.slice(2)}` : null, source: `Instantly: Demo-Kampagne ${1 + n % 3}`,
+      status: n % 400 === 0 ? "meeting" : contacted ? "contacted" : "new", last_contact_at: contacted ? days(-60 - n % 30) : null, next_task: null, next_task_at: null, estimated_value: null, notes: null,
+      message: replied ? replies[(n / 23) % replies.length] : null, message_at: replied ? iso(-60 - n % 30) : null, created_at: days(-120), updated_at: days(last ? -200 : -60 - n % 30),
+    }));
+  }
+
   const todo = (n, title, status, priority, due, values = {}) => own({
     id: `todo-${n}`, title, notes: "", status, priority, due_date: due == null ? null : days(due), customer_id: null, prospect_id: null, assignee_id: null,
     created_at: days(-10 - n), updated_at: days(-n % 6), ...values,
@@ -124,7 +143,7 @@ export function createFixtures(now = new Date()) {
     todo(1, "Offerte Musikschule überarbeiten", "not_started", "high", -2, { prospect_id: "prospect-6", assignee_id: ids.owner, notes: "Variante mit Wartungsvertrag ergänzen." }),
     todo(2, "Startseite Hotel abnehmen lassen", "in_progress", "high", 0, { customer_id: "customer-1", assignee_id: ids.admin }),
     todo(3, "Produktfotos für Bäckerei zuschneiden", "in_progress", "normal", 3, { customer_id: "customer-2", assignee_id: ids.limited }),
-    todo(4, "Quartalsabschluss vorbereiten", "not_started", "normal", 7, { assignee_id: ids.owner }),
+    todo(4, "Quartalsabschluss vorbereiten", "not_started", "normal", 7, { assignee_id: ids.owner, prospect_id: "instantly-00000000-0000-4000-8000-000000000001" }),
     todo(5, "Ideen für Newsletter sammeln", "not_started", "low", null),
     todo(6, "Sehr lange Aufgabe: Alle bestehenden Kundenprojekte auf Barrierefreiheit prüfen und die Ergebnisse zusammenfassen", "not_started", "normal", 12, { assignee_id: ids.admin }),
     todo(7, "Zugangsdaten Terminportal dokumentieren", "in_progress", "low", -1, { customer_id: "customer-4" }),

@@ -20,3 +20,4 @@
 .contact > span { overflow-wrap: anywhere; min-width: 0; }
 @media (max-width: 1279px) { .contact { min-height: 2.75rem; width: fit-content; max-width: 100%; color: var(--ink); } }
 @keyframes bar-up { from { opacity: 0; transform: scaleY(0); } }
+.search { padding-left: 2.75rem; border-radius: 999px; }
